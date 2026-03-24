@@ -10,6 +10,8 @@ namespace LudoMaster.Gameplay
     public class TokenController : MonoBehaviour
     {
         [SerializeField] private float stepMoveDuration = 0.12f;
+        [SerializeField] private AnimationCurve movementEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        [SerializeField] private float jumpHeight = 0.15f;
 
         public PlayerColor OwnerColor { get; private set; }
         public CoreTokenData Data { get; private set; }
@@ -29,10 +31,15 @@ namespace LudoMaster.Gameplay
             float t = 0f;
             while (t < 1f)
             {
-                t += Time.deltaTime / stepMoveDuration;
-                transform.position = Vector3.Lerp(start, worldPosition, t);
+                t += Time.deltaTime / Mathf.Max(0.01f, stepMoveDuration);
+                float eased = movementEase.Evaluate(Mathf.Clamp01(t));
+                Vector3 pos = Vector3.LerpUnclamped(start, worldPosition, eased);
+                pos.y += Mathf.Sin(eased * Mathf.PI) * jumpHeight;
+                transform.position = pos;
                 yield return null;
             }
+
+            transform.position = worldPosition;
         }
 
         /// <summary>
