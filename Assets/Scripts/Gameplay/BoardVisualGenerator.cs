@@ -20,6 +20,7 @@ namespace LudoMaster.Gameplay
 
         [Header("Colors")]
         [SerializeField] private Color boardBackgroundColor = new(0.11f, 0.15f, 0.24f, 1f);
+        [SerializeField] private float boardSpriteOpacity = 0.9f;
         [SerializeField] private Color boardFrameColor = new(0.96f, 0.98f, 1f, 1f);
         [SerializeField] private Color boardInnerColor = new(0.9f, 0.95f, 1f, 1f);
         [SerializeField] private Color pathTileColor = new(0.98f, 0.99f, 1f, 1f);
@@ -72,6 +73,17 @@ namespace LudoMaster.Gameplay
                 boardBackgroundColor,
                 -30,
                 GetRoundedRectSprite(0.22f));
+
+            var ludoBoardSpriteColor = Color.white;
+            ludoBoardSpriteColor.a = Mathf.Clamp01(boardSpriteOpacity);
+            CreateSpriteObject(
+                "LudoBoardSprite",
+                root,
+                Vector3.zero,
+                Vector2.one * (OuterBoardTiles * tileSize * 0.99f),
+                ludoBoardSpriteColor,
+                -26,
+                GetClassicBoardSprite());
         }
 
         private void BuildBoardFrame(Transform root)
@@ -307,6 +319,7 @@ namespace LudoMaster.Gameplay
         private static Sprite circleSprite;
         private static Sprite starSprite;
         private static Sprite triangleSprite;
+        private static Sprite classicBoardSprite;
         private static readonly Dictionary<int, Sprite> roundedRectSprites = new();
 
         private static Sprite GetCircleSprite()
@@ -415,6 +428,55 @@ namespace LudoMaster.Gameplay
             sprite = Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 128f);
             roundedRectSprites[key] = sprite;
             return sprite;
+        }
+
+        private static Sprite GetClassicBoardSprite()
+        {
+            if (classicBoardSprite != null) return classicBoardSprite;
+
+            const int size = 1024;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+
+            Color baseWhite = new(0.97f, 0.98f, 1f, 1f);
+            Color red = new(0.94f, 0.3f, 0.35f, 1f);
+            Color green = new(0.22f, 0.8f, 0.44f, 1f);
+            Color blue = new(0.26f, 0.56f, 0.98f, 1f);
+            Color yellow = new(0.98f, 0.84f, 0.24f, 1f);
+            Color line = new(0.18f, 0.22f, 0.32f, 1f);
+
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    float nx = (x / (size - 1f)) * 2f - 1f;
+                    float ny = (y / (size - 1f)) * 2f - 1f;
+                    Color pixel = baseWhite;
+
+                    if (nx < -0.2f && ny > 0.2f) pixel = red;
+                    else if (nx > 0.2f && ny > 0.2f) pixel = green;
+                    else if (nx < -0.2f && ny < -0.2f) pixel = blue;
+                    else if (nx > 0.2f && ny < -0.2f) pixel = yellow;
+
+                    bool onCenterCross = Mathf.Abs(nx) < 0.085f || Mathf.Abs(ny) < 0.085f;
+                    if (onCenterCross)
+                    {
+                        pixel = baseWhite;
+                    }
+
+                    bool onGridLine = Mathf.Abs(nx) < 0.01f || Mathf.Abs(ny) < 0.01f ||
+                                      Mathf.Abs(Mathf.Abs(nx) - 0.2f) < 0.008f || Mathf.Abs(Mathf.Abs(ny) - 0.2f) < 0.008f;
+                    if (onGridLine)
+                    {
+                        pixel = line;
+                    }
+
+                    tex.SetPixel(x, y, pixel);
+                }
+            }
+
+            tex.Apply();
+            classicBoardSprite = Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size / 2f);
+            return classicBoardSprite;
         }
 
         private static bool PointInTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)

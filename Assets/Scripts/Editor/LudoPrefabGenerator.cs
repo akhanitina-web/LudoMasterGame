@@ -67,10 +67,24 @@ namespace LudoMaster.EditorTools
             var textObj = new GameObject("Face", typeof(RectTransform), typeof(TextMeshProUGUI));
             textObj.transform.SetParent(go.transform, false);
             var text = textObj.GetComponent<TextMeshProUGUI>();
-            text.text = "Roll";
-            text.fontSize = 48;
+            text.text = "⚀";
+            text.fontSize = 88;
             text.alignment = TextAlignmentOptions.Center;
             text.color = Color.black;
+
+            var valueObj = new GameObject("Value", typeof(RectTransform), typeof(TextMeshProUGUI));
+            valueObj.transform.SetParent(go.transform, false);
+            var value = valueObj.GetComponent<TextMeshProUGUI>();
+            value.text = "1";
+            value.fontSize = 42;
+            value.alignment = TextAlignmentOptions.BottomRight;
+            value.color = new Color(0.1f, 0.1f, 0.1f);
+
+            var valueRect = valueObj.GetComponent<RectTransform>();
+            valueRect.anchorMin = new Vector2(0f, 0f);
+            valueRect.anchorMax = new Vector2(1f, 1f);
+            valueRect.offsetMin = new Vector2(0f, 0f);
+            valueRect.offsetMax = new Vector2(-12f, -8f);
 
             var rect = textObj.GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
@@ -88,6 +102,7 @@ namespace LudoMaster.EditorTools
             var soVisual = new SerializedObject(diceVisual);
             soVisual.FindProperty("diceButton").objectReferenceValue = go.GetComponent<Button>();
             soVisual.FindProperty("faceText").objectReferenceValue = text;
+            soVisual.FindProperty("valueText").objectReferenceValue = value;
             soVisual.FindProperty("diceTransform").objectReferenceValue = go.GetComponent<RectTransform>();
             soVisual.ApplyModifiedPropertiesWithoutUndo();
 
