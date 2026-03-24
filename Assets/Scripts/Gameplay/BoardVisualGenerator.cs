@@ -437,12 +437,13 @@ namespace LudoMaster.Gameplay
             const int size = 1024;
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
 
-            Color baseWhite = new(0.97f, 0.98f, 1f, 1f);
+            Color baseWhite = new(0.985f, 0.992f, 1f, 1f);
             Color red = new(0.94f, 0.3f, 0.35f, 1f);
             Color green = new(0.22f, 0.8f, 0.44f, 1f);
             Color blue = new(0.26f, 0.56f, 0.98f, 1f);
             Color yellow = new(0.98f, 0.84f, 0.24f, 1f);
             Color line = new(0.18f, 0.22f, 0.32f, 1f);
+            Color frame = new(0.1f, 0.14f, 0.24f, 1f);
 
             for (int x = 0; x < size; x++)
             {
@@ -457,7 +458,7 @@ namespace LudoMaster.Gameplay
                     else if (nx < -0.2f && ny < -0.2f) pixel = blue;
                     else if (nx > 0.2f && ny < -0.2f) pixel = yellow;
 
-                    bool onCenterCross = Mathf.Abs(nx) < 0.085f || Mathf.Abs(ny) < 0.085f;
+                    bool onCenterCross = Mathf.Abs(nx) < 0.09f || Mathf.Abs(ny) < 0.09f;
                     if (onCenterCross)
                     {
                         pixel = baseWhite;
@@ -470,13 +471,60 @@ namespace LudoMaster.Gameplay
                         pixel = line;
                     }
 
+                    bool onOuterFrame = Mathf.Abs(nx) > 0.94f || Mathf.Abs(ny) > 0.94f;
+                    if (onOuterFrame)
+                    {
+                        pixel = frame;
+                    }
+
+                    float vignette = 1f - (Mathf.Max(Mathf.Abs(nx), Mathf.Abs(ny)) * 0.07f);
+                    pixel *= Mathf.Clamp(vignette, 0.92f, 1f);
+                    pixel.a = 1f;
                     tex.SetPixel(x, y, pixel);
                 }
             }
 
+            StampHomeCircles(tex, size, new Vector2(-0.57f, 0.57f), Color.Lerp(red, Color.white, 0.55f));
+            StampHomeCircles(tex, size, new Vector2(0.57f, 0.57f), Color.Lerp(green, Color.white, 0.55f));
+            StampHomeCircles(tex, size, new Vector2(-0.57f, -0.57f), Color.Lerp(blue, Color.white, 0.55f));
+            StampHomeCircles(tex, size, new Vector2(0.57f, -0.57f), Color.Lerp(yellow, Color.white, 0.55f));
+
             tex.Apply();
             classicBoardSprite = Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size / 2f);
             return classicBoardSprite;
+        }
+
+        private static void StampHomeCircles(Texture2D tex, int size, Vector2 center, Color color)
+        {
+            float spacing = size * 0.09f;
+            float radius = size * 0.045f;
+            Vector2 baseCenter = new((center.x * 0.5f + 0.5f) * size, (center.y * 0.5f + 0.5f) * size);
+
+            for (int i = 0; i < 4; i++)
+            {
+                float xSign = i % 2 == 0 ? -1f : 1f;
+                float ySign = i < 2 ? 1f : -1f;
+                Vector2 slot = baseCenter + new Vector2(xSign * spacing, ySign * spacing);
+
+                int minX = Mathf.RoundToInt(slot.x - radius - 2f);
+                int maxX = Mathf.RoundToInt(slot.x + radius + 2f);
+                int minY = Mathf.RoundToInt(slot.y - radius - 2f);
+                int maxY = Mathf.RoundToInt(slot.y + radius + 2f);
+
+                for (int x = minX; x <= maxX; x++)
+                {
+                    if (x < 0 || x >= size) continue;
+                    for (int y = minY; y <= maxY; y++)
+                    {
+                        if (y < 0 || y >= size) continue;
+                        float distance = Vector2.Distance(new Vector2(x, y), slot);
+                        if (distance <= radius)
+                        {
+                            tex.SetPixel(x, y, color);
+                        }
+                    }
+                }
+            }
         }
 
         private static bool PointInTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)

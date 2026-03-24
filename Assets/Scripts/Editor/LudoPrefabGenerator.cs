@@ -104,6 +104,7 @@ namespace LudoMaster.EditorTools
             soVisual.FindProperty("faceText").objectReferenceValue = text;
             soVisual.FindProperty("valueText").objectReferenceValue = value;
             soVisual.FindProperty("diceTransform").objectReferenceValue = go.GetComponent<RectTransform>();
+            soVisual.FindProperty("diceBackground").objectReferenceValue = go.GetComponent<Image>();
             soVisual.ApplyModifiedPropertiesWithoutUndo();
 
             string prefabPath = $"{OutputPath}/DiceButton.prefab";

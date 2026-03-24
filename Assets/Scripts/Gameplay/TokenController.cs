@@ -18,6 +18,11 @@ namespace LudoMaster.Gameplay
         [SerializeField] private float deselectedAlpha = 0.95f;
         [SerializeField] private float selectedAlpha = 1f;
         [SerializeField] private float unselectableAlpha = 0.45f;
+        [SerializeField] private float selectablePulseSpeed = 4.5f;
+        [SerializeField] private float selectablePulseAmount = 0.08f;
+
+        private SpriteRenderer highlightRenderer;
+        private Vector3 defaultScale = Vector3.one;
 
         public PlayerColor OwnerColor { get; private set; }
         public CoreTokenData Data { get; private set; }
@@ -36,7 +41,27 @@ namespace LudoMaster.Gameplay
                 tokenCollider = GetComponent<Collider2D>();
             }
 
+            Transform highlight = transform.Find("Highlight");
+            if (highlight != null)
+            {
+                highlightRenderer = highlight.GetComponent<SpriteRenderer>();
+            }
+
+            defaultScale = transform.localScale;
+
             SetSelectable(false);
+        }
+
+        private void Update()
+        {
+            if (!IsSelectable)
+            {
+                transform.localScale = defaultScale;
+                return;
+            }
+
+            float pulse = 1f + (Mathf.Sin(Time.time * selectablePulseSpeed) * selectablePulseAmount);
+            transform.localScale = defaultScale * pulse;
         }
 
         public void Initialize(PlayerColor ownerColor, CoreTokenData data)
@@ -93,6 +118,11 @@ namespace LudoMaster.Gameplay
                 Color c = spriteRenderer.color;
                 c.a = selectable ? selectedAlpha : (Data != null && Data.State == TokenState.InBase ? deselectedAlpha : unselectableAlpha);
                 spriteRenderer.color = c;
+            }
+
+            if (highlightRenderer != null)
+            {
+                highlightRenderer.enabled = selectable;
             }
         }
 
