@@ -13,6 +13,7 @@ namespace LudoMaster.UI
     {
         [SerializeField] private Button diceButton;
         [SerializeField] private TMP_Text faceText;
+        [SerializeField] private TMP_Text valueText;
         [SerializeField] private RectTransform diceTransform;
         [SerializeField] private float rollingFlickerRate = 0.07f;
         [SerializeField] private float rollScale = 1.15f;
@@ -76,7 +77,12 @@ namespace LudoMaster.UI
             {
                 if (faceText != null)
                 {
-                    faceText.text = Random.Range(1, 7).ToString();
+                    int randomValue = Random.Range(1, 7);
+                    faceText.text = ToFaceGlyph(randomValue);
+                    if (valueText != null)
+                    {
+                        valueText.text = randomValue.ToString();
+                    }
                 }
 
                 if (diceTransform != null)
@@ -93,8 +99,27 @@ namespace LudoMaster.UI
         {
             if (faceText != null)
             {
-                faceText.text = value.ToString();
+                faceText.text = ToFaceGlyph(value);
             }
+
+            if (valueText != null)
+            {
+                valueText.text = value.ToString();
+            }
+        }
+
+        private static string ToFaceGlyph(int value)
+        {
+            return value switch
+            {
+                1 => "⚀",
+                2 => "⚁",
+                3 => "⚂",
+                4 => "⚃",
+                5 => "⚄",
+                6 => "⚅",
+                _ => "⚀"
+            };
         }
     }
 }

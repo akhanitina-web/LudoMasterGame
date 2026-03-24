@@ -19,6 +19,11 @@ namespace LudoMaster.Gameplay
         [SerializeField] private GameObject greenTokenPrefab;
         [SerializeField] private GameObject yellowTokenPrefab;
 
+        private void Awake()
+        {
+            TryLoadMissingPrefabs();
+        }
+
         public void BuildDefaultTokens(Transform tokenRoot, TokenSystem tokenSystem)
         {
             if (tokenRoot == null || tokenSystem == null)
@@ -100,6 +105,11 @@ namespace LudoMaster.Gameplay
                 PlayerColor.Yellow => yellowTokenPrefab,
                 _ => null
             };
+        }
+
+        private void OnValidate()
+        {
+            TryLoadMissingPrefabs();
         }
 
         private void TryLoadMissingPrefabs()
