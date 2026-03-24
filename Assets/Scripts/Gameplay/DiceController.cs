@@ -38,6 +38,8 @@ namespace LudoMaster.Gameplay
         private IEnumerator RollRoutine()
         {
             isRolling = true;
+            if (diceButton != null) diceButton.interactable = false;
+            GameSignals.OnDiceRollingStateChanged?.Invoke(true);
 
             if (diceAnimator != null)
             {
@@ -55,6 +57,8 @@ namespace LudoMaster.Gameplay
             GameSignals.OnDiceRolled?.Invoke(value);
 
             isRolling = false;
+            if (diceButton != null) diceButton.interactable = true;
+            GameSignals.OnDiceRollingStateChanged?.Invoke(false);
         }
     }
 }
