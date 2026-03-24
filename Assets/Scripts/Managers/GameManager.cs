@@ -11,29 +11,32 @@ namespace LudoMaster.Managers
     /// </summary>
     public class GameManager : MonoBehaviour
     {
-        [SerializeField] private TurnSystem turnSystem;
+        [SerializeField] private TurnManager turnManager;
         [SerializeField] private TokenSystem tokenSystem;
         [SerializeField] private TokenManager tokenManager;
         [SerializeField] private WinSystem winSystem;
         [SerializeField] private MultiplayerSyncManager multiplayerSync;
         [SerializeField] private TokenSpawner tokenSpawner;
+        [SerializeField] private RoomManager roomManager;
 
         private readonly List<PlayerData> players = new();
         private int pendingDiceValue = -1;
         private bool isAwaitingTokenSelection;
         private bool isResolvingMove;
 
-        private bool IsReady => turnSystem != null && tokenManager != null && winSystem != null;
+        private bool IsReady => turnManager != null && tokenManager != null && winSystem != null;
         private void OnEnable()
         {
             GameSignals.OnDiceRolled += HandleDiceRolled;
             GameSignals.OnTokenSelected += HandleTokenSelected;
+            GameSignals.OnPlayerRankAssigned += HandlePlayerRankAssigned;
         }
 
         private void OnDisable()
         {
             GameSignals.OnDiceRolled -= HandleDiceRolled;
             GameSignals.OnTokenSelected -= HandleTokenSelected;
+            GameSignals.OnPlayerRankAssigned -= HandlePlayerRankAssigned;
         }
 
         private void Start()
@@ -56,7 +59,8 @@ namespace LudoMaster.Managers
 
             BootstrapPlayers();
             EnsureTokensReady();
-            turnSystem.Initialize(players);
+            roomManager = roomManager ?? FindObjectOfType<RoomManager>();
+            turnManager.Initialize(players);
             GameSignals.OnMatchStateChanged?.Invoke(MatchState.Playing);
         }
 
@@ -88,18 +92,18 @@ namespace LudoMaster.Managers
 
         private void HandleDiceRolled(int value)
         {
-            if (!IsReady || turnSystem.CurrentPlayer == null || isResolvingMove || isAwaitingTokenSelection)
+            if (!IsReady || turnManager.CurrentPlayer == null || isResolvingMove || isAwaitingTokenSelection)
             {
                 return;
             }
 
-            if (!turnSystem.CurrentPlayerHasAnyMove(value))
+            if (!turnManager.CurrentPlayerHasAnyMove(value))
             {
-                turnSystem.SkipCurrentPlayer();
+                turnManager.SkipCurrentPlayer();
                 return;
             }
 
-            var current = turnSystem.CurrentPlayer;
+            var current = turnManager.CurrentPlayer;
             pendingDiceValue = value;
             isAwaitingTokenSelection = true;
             tokenManager.SetSelectableForMove(current, value);
@@ -121,7 +125,7 @@ namespace LudoMaster.Managers
                 return;
             }
 
-            PlayerData current = turnSystem.CurrentPlayer;
+            PlayerData current = turnManager.CurrentPlayer;
             if (current == null || current.Color != color)
             {
                 return;
@@ -151,10 +155,24 @@ namespace LudoMaster.Managers
             isAwaitingTokenSelection = false;
             isResolvingMove = false;
             tokenManager.SetSelectableForAll(false);
-            turnSystem.ResolveTurn(result);
+            turnManager.ResolveTurn(result);
             winSystem.EvaluateRanks(players);
         }
 
+
+        private void HandlePlayerRankAssigned(PlayerColor color, int placement)
+        {
+            if (placement != 1 || roomManager == null)
+            {
+                return;
+            }
+
+            PlayerData winner = players.Find(p => p.Color == color);
+            if (winner != null)
+            {
+                roomManager.RewardWinner(winner.PlayerId);
+            }
+        }
         private void EnsureTokensReady()
         {
             if (tokenManager.TotalTokenCount > 0)
