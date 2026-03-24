@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using LudoMaster.Core;
 using UnityEngine;
-using System.Linq;
 
 namespace LudoMaster.Gameplay
 {
@@ -269,35 +268,30 @@ namespace LudoMaster.Gameplay
 
         private void BuildCenterVictory(Transform root)
         {
-            float triScale = tileSize * 2.3f;
+            CreateSpriteObject(
+                "CenterRing",
+                root,
+                Vector3.zero,
+                Vector2.one * tileSize * 2.2f,
+                new Color(1f, 1f, 1f, 0.92f),
+                -9,
+                GetCircleSprite());
 
-            CreateTriangle(root, "Center_Red", new Vector3(-0.56f, 0.56f, 0f) * tileSize, 225f, GetPlayerColor(PlayerColor.Red, 1f), triScale);
-            CreateTriangle(root, "Center_Green", new Vector3(0.56f, 0.56f, 0f) * tileSize, 135f, GetPlayerColor(PlayerColor.Green, 1f), triScale);
-            CreateTriangle(root, "Center_Blue", new Vector3(-0.56f, -0.56f, 0f) * tileSize, 315f, GetPlayerColor(PlayerColor.Blue, 1f), triScale);
-            CreateTriangle(root, "Center_Yellow", new Vector3(0.56f, -0.56f, 0f) * tileSize, 45f, GetPlayerColor(PlayerColor.Yellow, 1f), triScale);
+            float petalOffset = tileSize * 0.42f;
+            float petalSize = tileSize * 1.15f;
+            CreateSpriteObject("Center_Red", root, new Vector3(-petalOffset, petalOffset, 0f), Vector2.one * petalSize, GetPlayerColor(PlayerColor.Red, 1f), -8, GetCircleSprite());
+            CreateSpriteObject("Center_Green", root, new Vector3(petalOffset, petalOffset, 0f), Vector2.one * petalSize, GetPlayerColor(PlayerColor.Green, 1f), -8, GetCircleSprite());
+            CreateSpriteObject("Center_Blue", root, new Vector3(-petalOffset, -petalOffset, 0f), Vector2.one * petalSize, GetPlayerColor(PlayerColor.Blue, 1f), -8, GetCircleSprite());
+            CreateSpriteObject("Center_Yellow", root, new Vector3(petalOffset, -petalOffset, 0f), Vector2.one * petalSize, GetPlayerColor(PlayerColor.Yellow, 1f), -8, GetCircleSprite());
 
             CreateSpriteObject(
                 "CenterCore",
                 root,
                 Vector3.zero,
-                Vector2.one * tileSize * 0.52f,
+                Vector2.one * tileSize * 0.66f,
                 Color.white,
                 -7,
                 GetCircleSprite());
-        }
-
-        private void CreateTriangle(Transform root, string name, Vector3 position, float zRotation, Color color, float scale)
-        {
-            GameObject triangle = CreateSpriteObject(
-                name,
-                root,
-                position,
-                Vector2.one * scale,
-                color,
-                -8,
-                GetTriangleSprite());
-
-            triangle.transform.localRotation = Quaternion.Euler(0f, 0f, zRotation);
         }
 
         private GameObject CreateSpriteObject(string name, Transform parent, Vector3 position, Vector2 size, Color color, int sortingOrder, Sprite sprite)
@@ -318,7 +312,6 @@ namespace LudoMaster.Gameplay
 
         private static Sprite circleSprite;
         private static Sprite starSprite;
-        private static Sprite triangleSprite;
         private static Sprite classicBoardSprite;
         private static readonly Dictionary<int, Sprite> roundedRectSprites = new();
 
@@ -373,30 +366,6 @@ namespace LudoMaster.Gameplay
             tex.Apply();
             starSprite = Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 128f);
             return starSprite;
-        }
-
-        private static Sprite GetTriangleSprite()
-        {
-            if (triangleSprite != null) return triangleSprite;
-
-            const int size = 128;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            Vector2 a = new(size * 0.5f, size * 0.08f);
-            Vector2 b = new(size * 0.1f, size * 0.9f);
-            Vector2 c = new(size * 0.9f, size * 0.9f);
-
-            for (int x = 0; x < size; x++)
-            {
-                for (int y = 0; y < size; y++)
-                {
-                    bool inside = PointInTriangle(new Vector2(x, y), a, b, c);
-                    tex.SetPixel(x, y, inside ? Color.white : Color.clear);
-                }
-            }
-
-            tex.Apply();
-            triangleSprite = Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 128f);
-            return triangleSprite;
         }
 
         private static Sprite GetRoundedRectSprite(float cornerRadiusNormalized)
@@ -525,15 +494,6 @@ namespace LudoMaster.Gameplay
                     }
                 }
             }
-        }
-
-        private static bool PointInTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
-        {
-            float area = 0.5f * (-b.y * c.x + a.y * (-b.x + c.x) + a.x * (b.y - c.y) + b.x * c.y);
-            float sign = area < 0f ? -1f : 1f;
-            float s = (a.y * c.x - a.x * c.y + (c.y - a.y) * p.x + (a.x - c.x) * p.y) * sign;
-            float t = (a.x * b.y - a.y * b.x + (a.y - b.y) * p.x + (b.x - a.x) * p.y) * sign;
-            return s > 0f && t > 0f && (s + t) < 2f * area * sign;
         }
 
         private Vector3 CoordToWorld(Vector2Int coord)
