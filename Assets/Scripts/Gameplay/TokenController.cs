@@ -1,5 +1,6 @@
 using System.Collections;
 using LudoMaster.Core;
+using LudoMaster.Signals;
 using UnityEngine;
 
 namespace LudoMaster.Gameplay
@@ -12,16 +13,38 @@ namespace LudoMaster.Gameplay
         [SerializeField] private float stepMoveDuration = 0.12f;
         [SerializeField] private AnimationCurve movementEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
         [SerializeField] private float jumpHeight = 0.15f;
+        [SerializeField] private SpriteRenderer spriteRenderer;
+        [SerializeField] private Collider2D tokenCollider;
+        [SerializeField] private float deselectedAlpha = 0.95f;
+        [SerializeField] private float selectedAlpha = 1f;
+        [SerializeField] private float unselectableAlpha = 0.45f;
 
         public PlayerColor OwnerColor { get; private set; }
         public CoreTokenData Data { get; private set; }
         public Vector3 SpawnPosition { get; private set; }
+        public bool IsSelectable { get; private set; }
+
+        private void Awake()
+        {
+            if (spriteRenderer == null)
+            {
+                spriteRenderer = GetComponent<SpriteRenderer>();
+            }
+
+            if (tokenCollider == null)
+            {
+                tokenCollider = GetComponent<Collider2D>();
+            }
+
+            SetSelectable(false);
+        }
 
         public void Initialize(PlayerColor ownerColor, CoreTokenData data)
         {
             OwnerColor = ownerColor;
             Data = data;
             SpawnPosition = transform.position;
+            SetSelectable(false);
         }
 
         /// <summary>
@@ -55,6 +78,30 @@ namespace LudoMaster.Gameplay
         public void ResetToSpawn()
         {
             transform.position = SpawnPosition;
+        }
+
+        public void SetSelectable(bool selectable)
+        {
+            IsSelectable = selectable;
+            if (tokenCollider != null)
+            {
+                tokenCollider.enabled = selectable;
+            }
+
+            if (spriteRenderer != null)
+            {
+                Color c = spriteRenderer.color;
+                c.a = selectable ? selectedAlpha : (Data != null && Data.State == TokenState.InBase ? deselectedAlpha : unselectableAlpha);
+                spriteRenderer.color = c;
+            }
+        }
+
+        private void OnMouseDown()
+        {
+            if (IsSelectable && Data != null)
+            {
+                GameSignals.OnTokenSelected?.Invoke(OwnerColor, Data.TokenId);
+            }
         }
     }
 }

@@ -14,6 +14,7 @@ namespace LudoMaster.Gameplay
         [SerializeField] private Transform tokenRoot;
 
         private readonly Dictionary<PlayerColor, List<TokenController>> tokensByPlayer = new();
+        public int TotalTokenCount { get; private set; }
 
         /// <summary>
         /// Initializes 4 players with 4 tokens each from spawned token prefabs.
@@ -21,6 +22,7 @@ namespace LudoMaster.Gameplay
         public void RegisterTokens(IEnumerable<TokenController> allTokens)
         {
             tokensByPlayer.Clear();
+            TotalTokenCount = 0;
             foreach (PlayerColor color in System.Enum.GetValues(typeof(PlayerColor)))
             {
                 tokensByPlayer[color] = new List<TokenController>(4);
@@ -29,7 +31,10 @@ namespace LudoMaster.Gameplay
             foreach (TokenController token in allTokens)
             {
                 tokensByPlayer[token.OwnerColor].Add(token);
+                TotalTokenCount++;
             }
+
+            SetSelectableForAll(false);
         }
 
         /// <summary>
@@ -128,6 +133,7 @@ namespace LudoMaster.Gameplay
 
         private bool CanMoveToken(PlayerData player, CoreTokenData tokenData, int diceValue)
         {
+            if (diceValue < 1 || diceValue > 6) return false;
             if (tokenData.State == TokenState.Finished) return false;
             if (tokenData.State == TokenState.InBase) return diceValue == 6;
 
@@ -212,6 +218,72 @@ namespace LudoMaster.Gameplay
             }
 
             return null;
+        }
+
+        public TokenController FindTokenController(PlayerColor color, int tokenId)
+        {
+            return FindToken(color, tokenId);
+        }
+
+        public CoreTokenData GetTokenData(PlayerData player, int tokenId)
+        {
+            if (player == null) return null;
+            for (int i = 0; i < player.Tokens.Count; i++)
+            {
+                if (player.Tokens[i].TokenId == tokenId)
+                {
+                    return player.Tokens[i];
+                }
+            }
+
+            return null;
+        }
+
+        public bool IsMovableToken(PlayerData player, int tokenId, int diceValue)
+        {
+            CoreTokenData tokenData = GetTokenData(player, tokenId);
+            return tokenData != null && CanMoveToken(player, tokenData, diceValue);
+        }
+
+        public void SetSelectableForMove(PlayerData player, int diceValue)
+        {
+            SetSelectableForAll(false);
+            if (player == null) return;
+
+            if (!tokensByPlayer.TryGetValue(player.Color, out List<TokenController> list))
+            {
+                return;
+            }
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                TokenController tokenController = list[i];
+                bool selectable = tokenController != null && IsMovableToken(player, tokenController.Data.TokenId, diceValue);
+                tokenController?.SetSelectable(selectable);
+            }
+        }
+
+        public void SetSelectableForAll(bool selectable)
+        {
+            foreach (var pair in tokensByPlayer)
+            {
+                for (int i = 0; i < pair.Value.Count; i++)
+                {
+                    pair.Value[i]?.SetSelectable(selectable);
+                }
+            }
+        }
+
+        public Transform EnsureTokenRoot()
+        {
+            if (tokenRoot != null)
+            {
+                return tokenRoot;
+            }
+
+            GameObject root = new("TokenContainer");
+            tokenRoot = root.transform;
+            return tokenRoot;
         }
 
         private int GetPlayerStartIndex(PlayerColor color)

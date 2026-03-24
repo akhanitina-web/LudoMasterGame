@@ -13,6 +13,11 @@ namespace LudoMaster.Gameplay
         [SerializeField] private Color tokenShadowColor = new(0f, 0f, 0f, 0.2f);
         [SerializeField] private Vector3 tokenShadowOffset = new(0.06f, -0.07f, 0f);
         [SerializeField] private float tokenShadowScale = 0.92f;
+        [Header("Optional token prefabs")]
+        [SerializeField] private GameObject redTokenPrefab;
+        [SerializeField] private GameObject blueTokenPrefab;
+        [SerializeField] private GameObject greenTokenPrefab;
+        [SerializeField] private GameObject yellowTokenPrefab;
 
         public void BuildDefaultTokens(Transform tokenRoot, TokenSystem tokenSystem)
         {
@@ -21,6 +26,8 @@ namespace LudoMaster.Gameplay
                 Debug.LogWarning("TokenSpawner requires tokenRoot and tokenSystem references.", this);
                 return;
             }
+
+            TryLoadMissingPrefabs();
 
             var tokens = new List<TokenController>(16);
             foreach (PlayerColor color in System.Enum.GetValues(typeof(PlayerColor)))
@@ -31,24 +38,78 @@ namespace LudoMaster.Gameplay
                 for (int i = 0; i < 4; i++)
                 {
                     Vector2 offset = new((i % 2 == 0 ? -1 : 1) * spacing, (i < 2 ? 1 : -1) * spacing);
-                    GameObject tokenObject = new($"Token_{color}_{i + 1}", typeof(SpriteRenderer), typeof(CircleCollider2D), typeof(TokenController));
+                    GameObject tokenObject = CreateTokenInstance(color, i + 1);
                     tokenObject.transform.SetParent(tokenRoot, false);
                     tokenObject.transform.position = center + new Vector3(offset.x, offset.y, 0f);
 
                     SpriteRenderer renderer = tokenObject.GetComponent<SpriteRenderer>();
-                    renderer.sprite = BuildTokenSprite();
-                    renderer.color = tint;
-                    renderer.sortingOrder = 2;
+                    if (renderer != null)
+                    {
+                        if (renderer.sprite == null)
+                        {
+                            renderer.sprite = BuildTokenSprite();
+                            renderer.color = tint;
+                        }
 
-                    CreateShadow(tokenObject.transform, renderer.sprite);
+                        renderer.sortingOrder = 2;
+                    }
+
+                    CircleCollider2D collider = tokenObject.GetComponent<CircleCollider2D>();
+                    if (collider == null)
+                    {
+                        tokenObject.AddComponent<CircleCollider2D>();
+                    }
+
+                    if (renderer != null && renderer.sprite != null && tokenObject.transform.Find("Shadow") == null)
+                    {
+                        CreateShadow(tokenObject.transform, renderer.sprite);
+                    }
 
                     TokenController token = tokenObject.GetComponent<TokenController>();
+                    if (token == null)
+                    {
+                        token = tokenObject.AddComponent<TokenController>();
+                    }
+
                     token.Initialize(color, new CoreTokenData { TokenId = i });
                     tokens.Add(token);
                 }
             }
 
             tokenSystem.RegisterTokens(tokens);
+        }
+
+        private GameObject CreateTokenInstance(PlayerColor color, int tokenNumber)
+        {
+            GameObject prefab = GetTokenPrefab(color);
+            if (prefab != null)
+            {
+                return Instantiate(prefab, transform);
+            }
+
+            return new GameObject($"Token_{color}_{tokenNumber}", typeof(SpriteRenderer), typeof(CircleCollider2D), typeof(TokenController));
+        }
+
+        private GameObject GetTokenPrefab(PlayerColor color)
+        {
+            return color switch
+            {
+                PlayerColor.Red => redTokenPrefab,
+                PlayerColor.Blue => blueTokenPrefab,
+                PlayerColor.Green => greenTokenPrefab,
+                PlayerColor.Yellow => yellowTokenPrefab,
+                _ => null
+            };
+        }
+
+        private void TryLoadMissingPrefabs()
+        {
+#if UNITY_EDITOR
+            redTokenPrefab ??= UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Generated/Token_Red.prefab");
+            blueTokenPrefab ??= UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Generated/Token_Blue.prefab");
+            greenTokenPrefab ??= UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Generated/Token_Green.prefab");
+            yellowTokenPrefab ??= UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Generated/Token_Yellow.prefab");
+#endif
         }
 
         private void CreateShadow(Transform tokenTransform, Sprite tokenSprite)

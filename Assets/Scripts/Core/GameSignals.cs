@@ -9,6 +9,7 @@ namespace LudoMaster.Signals
     public static class GameSignals
     {
         public static Action<int> OnDiceRolled;
+        public static Action<PlayerColor, int> OnTokenSelected;
         public static Action<bool> OnDiceRollingStateChanged;
         public static Action<PlayerColor> OnTurnChanged;
         public static Action<string, int> OnCoinBalanceChanged;

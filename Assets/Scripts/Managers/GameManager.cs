@@ -15,18 +15,24 @@ namespace LudoMaster.Managers
         [SerializeField] private TokenSystem tokenSystem;
         [SerializeField] private WinSystem winSystem;
         [SerializeField] private MultiplayerSyncManager multiplayerSync;
+        [SerializeField] private TokenSpawner tokenSpawner;
 
         private readonly List<PlayerData> players = new();
+        private int pendingDiceValue = -1;
+        private bool isAwaitingTokenSelection;
+        private bool isResolvingMove;
 
         private bool IsReady => turnSystem != null && tokenSystem != null && winSystem != null;
         private void OnEnable()
         {
             GameSignals.OnDiceRolled += HandleDiceRolled;
+            GameSignals.OnTokenSelected += HandleTokenSelected;
         }
 
         private void OnDisable()
         {
             GameSignals.OnDiceRolled -= HandleDiceRolled;
+            GameSignals.OnTokenSelected -= HandleTokenSelected;
         }
 
         private void Start()
@@ -39,6 +45,7 @@ namespace LudoMaster.Managers
             }
 
             BootstrapPlayers();
+            EnsureTokensReady();
             turnSystem.Initialize(players);
             GameSignals.OnMatchStateChanged?.Invoke(MatchState.Playing);
         }
@@ -71,7 +78,7 @@ namespace LudoMaster.Managers
 
         private void HandleDiceRolled(int value)
         {
-            if (!IsReady || turnSystem.CurrentPlayer == null)
+            if (!IsReady || turnSystem.CurrentPlayer == null || isResolvingMove || isAwaitingTokenSelection)
             {
                 return;
             }
@@ -82,20 +89,76 @@ namespace LudoMaster.Managers
                 return;
             }
 
-            // MVP flow: auto-select first valid token to keep architecture complete.
             var current = turnSystem.CurrentPlayer;
-            var token = tokenSystem.GetFirstMovableToken(current, value);
-            if (token != null)
+            pendingDiceValue = value;
+            isAwaitingTokenSelection = true;
+            tokenSystem.SetSelectableForMove(current, value);
+
+            if (current.IsBot)
             {
-                StartCoroutine(tokenSystem.MoveToken(current, token, value, OnTurnResolved));
-                multiplayerSync?.BroadcastMove(current.PlayerId, token.TokenId, value);
+                var token = tokenSystem.GetFirstMovableToken(current, value);
+                if (token != null)
+                {
+                    HandleTokenSelected(current.Color, token.TokenId);
+                }
             }
+        }
+
+        private void HandleTokenSelected(PlayerColor color, int tokenId)
+        {
+            if (!isAwaitingTokenSelection || isResolvingMove || !IsReady)
+            {
+                return;
+            }
+
+            PlayerData current = turnSystem.CurrentPlayer;
+            if (current == null || current.Color != color)
+            {
+                return;
+            }
+
+            if (!tokenSystem.IsMovableToken(current, tokenId, pendingDiceValue))
+            {
+                return;
+            }
+
+            CoreTokenData token = tokenSystem.GetTokenData(current, tokenId);
+            if (token == null)
+            {
+                return;
+            }
+
+            isAwaitingTokenSelection = false;
+            isResolvingMove = true;
+            tokenSystem.SetSelectableForAll(false);
+            StartCoroutine(tokenSystem.MoveToken(current, token, pendingDiceValue, OnTurnResolved));
+            multiplayerSync?.BroadcastMove(current.PlayerId, token.TokenId, pendingDiceValue);
         }
 
         private void OnTurnResolved(TurnResult result)
         {
+            pendingDiceValue = -1;
+            isAwaitingTokenSelection = false;
+            isResolvingMove = false;
+            tokenSystem.SetSelectableForAll(false);
             turnSystem.ResolveTurn(result);
             winSystem.EvaluateRanks(players);
+        }
+
+        private void EnsureTokensReady()
+        {
+            if (tokenSystem.TotalTokenCount > 0)
+            {
+                return;
+            }
+
+            tokenSpawner = tokenSpawner ?? FindObjectOfType<TokenSpawner>();
+            if (tokenSpawner == null)
+            {
+                tokenSpawner = new GameObject("TokenSpawner").AddComponent<TokenSpawner>();
+            }
+
+            tokenSpawner.BuildDefaultTokens(tokenSystem.EnsureTokenRoot(), tokenSystem);
         }
     }
 }
