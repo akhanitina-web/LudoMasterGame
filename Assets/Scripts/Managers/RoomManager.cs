@@ -18,11 +18,7 @@ namespace LudoMaster.Managers
 
         private void Awake()
         {
-            if (coinManager == null)
-            {
-                coinManager = FindObjectOfType<CoinManager>();
-            }
-
+            coinManager ??= FindObjectOfType<CoinManager>();
             EnsureDefaultRooms();
         }
 
@@ -32,8 +28,8 @@ namespace LudoMaster.Managers
             {
                 RoomId = System.Guid.NewGuid().ToString("N"),
                 RoomName = roomName,
-                EntryFee = entryFee,
-                WinReward = winReward,
+                EntryFee = Mathf.Max(0, entryFee),
+                WinReward = Mathf.Max(0, winReward),
                 CurrentPot = 0
             };
 
@@ -44,6 +40,11 @@ namespace LudoMaster.Managers
 
         public bool JoinRoom(string roomId, string playerId)
         {
+            if (string.IsNullOrWhiteSpace(roomId) || string.IsNullOrWhiteSpace(playerId))
+            {
+                return false;
+            }
+
             RoomData room = AvailableRooms.Find(r => r.RoomId == roomId);
             if (room == null || !room.HasOpenSlot() || room.PlayerIds.Contains(playerId))
             {
@@ -56,7 +57,7 @@ namespace LudoMaster.Managers
             }
 
             room.PlayerIds.Add(playerId);
-            room.CurrentPot += Mathf.Max(room.EntryFee, 0);
+            room.CurrentPot += room.EntryFee;
             CurrentRoom = room;
             GameSignals.OnRoomDataChanged?.Invoke();
             return true;
@@ -69,7 +70,7 @@ namespace LudoMaster.Managers
 
         public void RewardWinner(string playerId)
         {
-            if (CurrentRoom == null || coinManager == null)
+            if (CurrentRoom == null || coinManager == null || string.IsNullOrWhiteSpace(playerId))
             {
                 return;
             }
@@ -87,10 +88,10 @@ namespace LudoMaster.Managers
                 return;
             }
 
+            CreateRoom("Free Room", 0, 0);
             CreateRoom("Low Coin Room", 100, 400);
-            CreateRoom("Medium Coin Room", 300, 1200);
-            CreateRoom("High Coin Room", 700, 2800);
-            CreateRoom("Private Room", 500, 2000);
+            CreateRoom("Medium Coin Room", 1000, 4000);
+            CreateRoom("High Coin Room", 10000, 40000);
         }
     }
 }

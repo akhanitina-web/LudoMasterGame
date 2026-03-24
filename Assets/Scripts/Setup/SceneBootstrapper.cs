@@ -92,7 +92,8 @@ namespace LudoMaster.Setup
                 canvas.transform.SetParent(sceneRoot, false);
 
                 RectTransform safe = CreateSafeArea(canvas.transform);
-                BuildBoardImage(safe);
+                RectTransform gameCanvasRoot = CreatePanel("GameCanvasRoot", safe, Vector2.zero, Vector2.one, Color.clear);
+                BuildBoardImage(gameCanvasRoot);
 
                 BoardPathData pathData = ScriptableObject.CreateInstance<BoardPathData>();
                 Transform boardRoot = GetOrCreateTransform("BoardPathRoot", sceneRoot);
@@ -140,30 +141,33 @@ namespace LudoMaster.Setup
                 TokenSpawner tokenSpawner = GetOrCreateComponent<TokenSpawner>("TokenSpawner", sceneRoot);
                 tokenSpawner.BuildDefaultTokens(tokenContainer, tokenSystem);
 
-                BuildHud(safe, Object.FindObjectOfType<CoinManager>());
-                BuildVictoryPanel(safe);
+                BuildHud(gameCanvasRoot, Object.FindObjectOfType<CoinManager>());
+                BuildVictoryPanel(gameCanvasRoot);
             }
 
-            private static void BuildBoardImage(RectTransform safeArea)
+            private static void BuildBoardImage(RectTransform canvasRoot)
             {
-                RectTransform board = CreatePanel("BoardSprite", safeArea, new Vector2(0.08f, 0.23f), new Vector2(0.92f, 0.83f), Color.white);
+                RectTransform boardContainer = CreatePanel("BoardContainer", canvasRoot, new Vector2(0.08f, 0.23f), new Vector2(0.92f, 0.83f), Color.clear);
+                RectTransform board = CreatePanel("LudoBoard", boardContainer, Vector2.zero, Vector2.one, Color.white);
                 Image boardImage = board.GetComponent<Image>();
                 boardImage.sprite = LudoSpriteFactory.GetBoardSprite();
                 boardImage.type = Image.Type.Simple;
                 boardImage.preserveAspect = true;
             }
 
-            private static void BuildHud(RectTransform safeArea, CoinManager coinManager)
+            private static void BuildHud(RectTransform canvasRoot, CoinManager coinManager)
             {
-                RectTransform uiRoot = CreatePanel("UI", safeArea, Vector2.zero, Vector2.one, Color.clear);
-
-                RectTransform topHud = CreatePanel("TopHUD", uiRoot, new Vector2(0.04f, 0.93f), new Vector2(0.96f, 0.992f), new Color(0.07f, 0.1f, 0.2f, 0.9f));
-                TMP_Text coinText = CreateText("CoinText", topHud, "Coins: 0", 42, TextAlignmentOptions.Left, new Vector2(0.12f, 0.52f));
-                TMP_Text turnIndicator = CreateText("TurnIndicator", topHud, "Turn: Red", 44, TextAlignmentOptions.Center, new Vector2(0.5f, 0.52f));
+                RectTransform topHud = CreatePanel("TopBar", canvasRoot, new Vector2(0.04f, 0.93f), new Vector2(0.96f, 0.992f), new Color(0.07f, 0.1f, 0.2f, 0.9f));
+                TMP_Text coinText = CreateText("CoinsText", topHud, "Coins: 0", 42, TextAlignmentOptions.Left, new Vector2(0.12f, 0.52f));
+                TMP_Text turnIndicator = CreateText("PlayerTurnText", topHud, "Turn: Red", 44, TextAlignmentOptions.Center, new Vector2(0.5f, 0.52f));
                 TMP_Text resultText = CreateText("ResultText", topHud, string.Empty, 30, TextAlignmentOptions.Right, new Vector2(0.95f, 0.52f));
                 TMP_Text roomText = CreateText("RoomText", topHud, "Room: Not Joined", 26, TextAlignmentOptions.Center, new Vector2(0.5f, 0.15f));
+                CreateButton("SettingsButton", topHud, "⚙", new Vector2(0.98f, 0.5f), new Vector2(85f, 85f));
 
-                RectTransform diceParent = CreatePanel("DiceWidget", uiRoot, new Vector2(0.42f, 0.1f), new Vector2(0.58f, 0.2f), new Color(1f, 1f, 1f, 0.97f));
+                CreatePanel("PlayerPanels", canvasRoot, new Vector2(0.03f, 0.23f), new Vector2(0.97f, 0.88f), new Color(0f, 0f, 0f, 0f));
+
+                RectTransform dicePanel = CreatePanel("DicePanel", canvasRoot, new Vector2(0.32f, 0.02f), new Vector2(0.68f, 0.2f), new Color(1f, 1f, 1f, 0.1f));
+                RectTransform diceParent = CreatePanel("DiceFace", dicePanel, new Vector2(0.28f, 0.22f), new Vector2(0.72f, 0.95f), new Color(1f, 1f, 1f, 0.97f));
                 Image faceImage = new GameObject("DiceFaceImage", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
                 RectTransform faceRect = faceImage.rectTransform;
                 faceRect.SetParent(diceParent, false);
@@ -177,8 +181,7 @@ namespace LudoMaster.Setup
                 TMP_Text valueText = CreateText("DiceValue", diceParent, "1", 46, TextAlignmentOptions.Center, new Vector2(0.5f, 0.2f));
                 valueText.color = new Color(0.12f, 0.15f, 0.2f, 1f);
 
-                RectTransform rollButtonRoot = CreatePanel("DiceButton", uiRoot, new Vector2(0.34f, 0.03f), new Vector2(0.66f, 0.1f), Color.clear);
-                Button diceButton = CreateButton("RollButton", rollButtonRoot, "Roll Dice", new Vector2(0.5f, 0.5f), new Vector2(320f, 110f));
+                Button diceButton = CreateButton("DiceButton", dicePanel, "Roll Dice", new Vector2(0.5f, 0.1f), new Vector2(320f, 110f));
 
                 DiceManager diceManager = diceButton.gameObject.GetComponent<DiceManager>() ?? diceButton.gameObject.AddComponent<DiceManager>();
                 diceManager.Configure(diceButton);
@@ -206,13 +209,16 @@ namespace LudoMaster.Setup
                 coinManager?.NotifyBalance("P1");
             }
 
-            private static void BuildVictoryPanel(RectTransform safeArea)
+            private static void BuildVictoryPanel(RectTransform canvasRoot)
             {
-                RectTransform victoryPanel = CreatePanel("VictoryPanel", safeArea, new Vector2(0.2f, 0.43f), new Vector2(0.8f, 0.58f), new Color(0f, 0f, 0f, 0.2f));
+                RectTransform popupPanels = CreatePanel("PopupPanels", canvasRoot, Vector2.zero, Vector2.one, Color.clear);
+                RectTransform victoryPanel = CreatePanel("WinPopup", popupPanels, new Vector2(0.2f, 0.43f), new Vector2(0.8f, 0.58f), new Color(0f, 0f, 0f, 0.2f));
                 TMP_Text text = CreateText("VictoryText", victoryPanel, "Victory!", 78, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f));
                 text.color = new Color(1f, 0.92f, 0.35f, 0.25f);
                 WinCelebrationUI celebration = victoryPanel.gameObject.GetComponent<WinCelebrationUI>() ?? victoryPanel.gameObject.AddComponent<WinCelebrationUI>();
                 SetPrivateField(celebration, "label", text);
+                CreatePanel("LosePopup", popupPanels, new Vector2(0.2f, 0.26f), new Vector2(0.8f, 0.41f), new Color(0f, 0f, 0f, 0.15f)).gameObject.SetActive(false);
+                CreatePanel("MatchmakingPopup", popupPanels, new Vector2(0.2f, 0.6f), new Vector2(0.8f, 0.75f), new Color(0f, 0f, 0f, 0.15f)).gameObject.SetActive(false);
             }
 
             private static void EnsureManagers()
@@ -225,6 +231,16 @@ namespace LudoMaster.Setup
                 if (Object.FindObjectOfType<RoomManager>() == null)
                 {
                     new GameObject("RoomManager").AddComponent<RoomManager>();
+                }
+
+                if (Object.FindObjectOfType<PhotonNetworkManager>() == null)
+                {
+                    new GameObject("NetworkManager").AddComponent<PhotonNetworkManager>();
+                }
+
+                if (Object.FindObjectOfType<AdManager>() == null)
+                {
+                    new GameObject("AdManager").AddComponent<AdManager>();
                 }
             }
         }
