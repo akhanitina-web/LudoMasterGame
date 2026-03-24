@@ -6,21 +6,26 @@ using UnityEngine.UI;
 namespace LudoMaster.UI
 {
     /// <summary>
-    /// Handles room creation, room join, and room list refresh actions.
+    /// Handles lobby room options and quick joins for different coin tiers.
     /// </summary>
     public class RoomSelectionUI : MonoBehaviour
     {
         [SerializeField] private RoomManager roomManager;
         [SerializeField] private TMP_InputField roomNameInput;
         [SerializeField] private TMP_Text roomListText;
-        [SerializeField] private Button createRoomButton;
+
+        [Header("Room Buttons")]
+        [SerializeField] private Button lowCoinRoomButton;
+        [SerializeField] private Button mediumCoinRoomButton;
+        [SerializeField] private Button highCoinRoomButton;
+        [SerializeField] private Button privateRoomButton;
 
         private void Awake()
         {
-            if (createRoomButton != null)
-            {
-                createRoomButton.onClick.AddListener(CreateDefaultRoom);
-            }
+            if (lowCoinRoomButton != null) lowCoinRoomButton.onClick.AddListener(CreateLowCoinRoom);
+            if (mediumCoinRoomButton != null) mediumCoinRoomButton.onClick.AddListener(CreateMediumCoinRoom);
+            if (highCoinRoomButton != null) highCoinRoomButton.onClick.AddListener(CreateHighCoinRoom);
+            if (privateRoomButton != null) privateRoomButton.onClick.AddListener(CreatePrivateRoom);
         }
 
         private void OnEnable()
@@ -34,13 +39,21 @@ namespace LudoMaster.UI
             LudoMaster.Signals.GameSignals.OnRoomDataChanged -= RefreshRoomList;
         }
 
-        /// <summary>
-        /// Creates a basic room option (entry 50, reward 200) for quick matchmaking.
-        /// </summary>
-        public void CreateDefaultRoom()
+        public void CreateLowCoinRoom() => CreateRoom("Low Coin Room", 25, 100);
+        public void CreateMediumCoinRoom() => CreateRoom("Medium Coin Room", 100, 400);
+        public void CreateHighCoinRoom() => CreateRoom("High Coin Room", 500, 2400);
+
+        public void CreatePrivateRoom()
         {
-            string roomName = string.IsNullOrWhiteSpace(roomNameInput?.text) ? "Classic Room" : roomNameInput.text;
-            roomManager.CreateRoom(roomName, 50, 200);
+            string custom = string.IsNullOrWhiteSpace(roomNameInput?.text) ? "Private Room" : roomNameInput.text.Trim();
+            CreateRoom(custom, 200, 1000);
+        }
+
+        private void CreateRoom(string defaultName, int fee, int reward)
+        {
+            if (roomManager == null) return;
+            string custom = roomNameInput != null && !string.IsNullOrWhiteSpace(roomNameInput.text) ? roomNameInput.text.Trim() : defaultName;
+            roomManager.CreateRoom(custom, fee, reward);
         }
 
         private void RefreshRoomList()
@@ -49,7 +62,7 @@ namespace LudoMaster.UI
 
             if (roomManager.AvailableRooms.Count == 0)
             {
-                roomListText.text = "No rooms available.";
+                roomListText.text = "No rooms available yet. Create one to start.";
                 return;
             }
 
