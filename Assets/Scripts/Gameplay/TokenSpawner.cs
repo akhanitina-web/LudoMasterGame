@@ -10,9 +10,18 @@ namespace LudoMaster.Gameplay
     public class TokenSpawner : MonoBehaviour
     {
         [SerializeField] private float spacing = 0.55f;
+        [SerializeField] private Color tokenShadowColor = new(0f, 0f, 0f, 0.2f);
+        [SerializeField] private Vector3 tokenShadowOffset = new(0.06f, -0.07f, 0f);
+        [SerializeField] private float tokenShadowScale = 0.92f;
 
         public void BuildDefaultTokens(Transform tokenRoot, TokenSystem tokenSystem)
         {
+            if (tokenRoot == null || tokenSystem == null)
+            {
+                Debug.LogWarning("TokenSpawner requires tokenRoot and tokenSystem references.", this);
+                return;
+            }
+
             var tokens = new List<TokenController>(16);
             foreach (PlayerColor color in System.Enum.GetValues(typeof(PlayerColor)))
             {
@@ -21,23 +30,38 @@ namespace LudoMaster.Gameplay
 
                 for (int i = 0; i < 4; i++)
                 {
-                    Vector2 offset = new Vector2((i % 2 == 0 ? -1 : 1) * spacing, (i < 2 ? 1 : -1) * spacing);
-                    var go = new GameObject($"{color}Token_{i + 1}", typeof(SpriteRenderer), typeof(CircleCollider2D), typeof(TokenController));
-                    go.transform.SetParent(tokenRoot);
-                    go.transform.position = center + new Vector3(offset.x, offset.y, 0f);
+                    Vector2 offset = new((i % 2 == 0 ? -1 : 1) * spacing, (i < 2 ? 1 : -1) * spacing);
+                    GameObject tokenObject = new($"Token_{color}_{i + 1}", typeof(SpriteRenderer), typeof(CircleCollider2D), typeof(TokenController));
+                    tokenObject.transform.SetParent(tokenRoot, false);
+                    tokenObject.transform.position = center + new Vector3(offset.x, offset.y, 0f);
 
-                    var renderer = go.GetComponent<SpriteRenderer>();
+                    SpriteRenderer renderer = tokenObject.GetComponent<SpriteRenderer>();
                     renderer.sprite = BuildTokenSprite();
                     renderer.color = tint;
                     renderer.sortingOrder = 2;
 
-                    var token = go.GetComponent<TokenController>();
+                    CreateShadow(tokenObject.transform, renderer.sprite);
+
+                    TokenController token = tokenObject.GetComponent<TokenController>();
                     token.Initialize(color, new CoreTokenData { TokenId = i });
                     tokens.Add(token);
                 }
             }
 
             tokenSystem.RegisterTokens(tokens);
+        }
+
+        private void CreateShadow(Transform tokenTransform, Sprite tokenSprite)
+        {
+            GameObject shadowObject = new("Shadow", typeof(SpriteRenderer));
+            shadowObject.transform.SetParent(tokenTransform, false);
+            shadowObject.transform.localPosition = tokenShadowOffset;
+            shadowObject.transform.localScale = Vector3.one * tokenShadowScale;
+
+            SpriteRenderer shadowRenderer = shadowObject.GetComponent<SpriteRenderer>();
+            shadowRenderer.sprite = tokenSprite;
+            shadowRenderer.color = tokenShadowColor;
+            shadowRenderer.sortingOrder = 1;
         }
 
         private static Vector3 GetBaseCenter(PlayerColor color)
@@ -73,9 +97,9 @@ namespace LudoMaster.Gameplay
                 return circleSprite;
             }
 
-            Texture2D texture = new Texture2D(64, 64, TextureFormat.RGBA32, false);
-            Vector2 center = new Vector2(31.5f, 31.5f);
-            float radius = 30f;
+            Texture2D texture = new(64, 64, TextureFormat.RGBA32, false);
+            Vector2 center = new(31.5f, 31.5f);
+            const float radius = 30f;
 
             for (int x = 0; x < texture.width; x++)
             {

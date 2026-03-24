@@ -39,6 +39,16 @@ namespace LudoMaster.EditorTools
             var sprite = root.AddComponent<SpriteRenderer>();
             sprite.sprite = CreateCircleSprite();
             sprite.color = tint;
+            sprite.sortingOrder = 2;
+
+            var shadow = new GameObject("Shadow", typeof(SpriteRenderer));
+            shadow.transform.SetParent(root.transform, false);
+            shadow.transform.localPosition = new Vector3(0.06f, -0.07f, 0f);
+            shadow.transform.localScale = Vector3.one * 0.92f;
+            var shadowSprite = shadow.GetComponent<SpriteRenderer>();
+            shadowSprite.sprite = sprite.sprite;
+            shadowSprite.color = new Color(0f, 0f, 0f, 0.2f);
+            shadowSprite.sortingOrder = 1;
 
             root.AddComponent<CircleCollider2D>();
             root.AddComponent<TokenController>();
@@ -57,8 +67,8 @@ namespace LudoMaster.EditorTools
             var textObj = new GameObject("Face", typeof(RectTransform), typeof(TextMeshProUGUI));
             textObj.transform.SetParent(go.transform, false);
             var text = textObj.GetComponent<TextMeshProUGUI>();
-            text.text = "6";
-            text.fontSize = 52;
+            text.text = "Roll";
+            text.fontSize = 48;
             text.alignment = TextAlignmentOptions.Center;
             text.color = Color.black;
 
@@ -68,7 +78,18 @@ namespace LudoMaster.EditorTools
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
 
-            go.AddComponent<DiceVisualUI>();
+            var diceController = go.AddComponent<DiceController>();
+            var diceVisual = go.AddComponent<DiceVisualUI>();
+
+            var soCtrl = new SerializedObject(diceController);
+            soCtrl.FindProperty("diceButton").objectReferenceValue = go.GetComponent<Button>();
+            soCtrl.ApplyModifiedPropertiesWithoutUndo();
+
+            var soVisual = new SerializedObject(diceVisual);
+            soVisual.FindProperty("diceButton").objectReferenceValue = go.GetComponent<Button>();
+            soVisual.FindProperty("faceText").objectReferenceValue = text;
+            soVisual.FindProperty("diceTransform").objectReferenceValue = go.GetComponent<RectTransform>();
+            soVisual.ApplyModifiedPropertiesWithoutUndo();
 
             string prefabPath = $"{OutputPath}/DiceButton.prefab";
             PrefabUtility.SaveAsPrefabAsset(go, prefabPath);

@@ -15,11 +15,13 @@ namespace LudoMaster.Gameplay
 
         public PlayerColor OwnerColor { get; private set; }
         public CoreTokenData Data { get; private set; }
+        public Vector3 SpawnPosition { get; private set; }
 
         public void Initialize(PlayerColor ownerColor, CoreTokenData data)
         {
             OwnerColor = ownerColor;
             Data = data;
+            SpawnPosition = transform.position;
         }
 
         /// <summary>
@@ -48,6 +50,11 @@ namespace LudoMaster.Gameplay
         public void SnapTo(Vector3 worldPosition)
         {
             transform.position = worldPosition;
+        }
+
+        public void ResetToSpawn()
+        {
+            transform.position = SpawnPosition;
         }
     }
 }

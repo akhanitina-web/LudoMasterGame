@@ -37,7 +37,7 @@ namespace LudoMaster.UI
         {
             if (coinManager != null && coinText != null)
             {
-                coinText.text = coinManager.GetBalance(localPlayerId).ToString();
+                coinText.text = $"Coins: {coinManager.GetBalance(localPlayerId)}";
             }
         }
 

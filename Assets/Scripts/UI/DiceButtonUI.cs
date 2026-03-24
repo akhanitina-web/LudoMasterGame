@@ -14,8 +14,19 @@ namespace LudoMaster.UI
 
         private void Awake()
         {
-            if (diceButton != null)
+            if (diceButton == null)
             {
+                diceButton = GetComponent<Button>();
+            }
+
+            if (diceController == null)
+            {
+                diceController = GetComponent<DiceController>();
+            }
+
+            if (diceButton != null && diceController != null)
+            {
+                diceButton.onClick.RemoveListener(diceController.RollDice);
                 diceButton.onClick.AddListener(diceController.RollDice);
             }
         }
