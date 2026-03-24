@@ -1,0 +1,306 @@
+using System.Collections.Generic;
+using LudoMaster.Core;
+using LudoMaster.Gameplay;
+using LudoMaster.Managers;
+using LudoMaster.UI;
+using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+namespace LudoMaster.Setup
+{
+    /// <summary>
+    /// Builds missing scene objects at runtime so MainMenu/GameScene are playable in a clean checkout.
+    /// </summary>
+    public static class SceneBootstrapper
+    {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void BuildSceneIfNeeded()
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            if (scene.name == "MainMenu")
+            {
+                MainMenuRuntimeBuilder.Build();
+            }
+            else if (scene.name == "GameScene")
+            {
+                GameSceneRuntimeBuilder.Build();
+            }
+        }
+
+        private static class MainMenuRuntimeBuilder
+        {
+            public static void Build()
+            {
+                EnsureEventSystem();
+                CoinManager coinManager = Object.FindObjectOfType<CoinManager>();
+                if (coinManager == null)
+                {
+                    coinManager = new GameObject("CoinManager").AddComponent<CoinManager>();
+                }
+
+                RoomManager roomManager = Object.FindObjectOfType<RoomManager>();
+                if (roomManager == null)
+                {
+                    roomManager = new GameObject("RoomManager").AddComponent<RoomManager>();
+                }
+
+                Canvas canvas = EnsureCanvas();
+                RectTransform safe = CreateSafeArea(canvas.transform);
+
+                var top = CreatePanel("TopHUD", safe, new Vector2(0f, 0.84f), new Vector2(1f, 1f), new Color(0.08f, 0.1f, 0.2f, 0.9f));
+                TMP_Text coinText = CreateText("CoinText", top, "Coins: 1000", 54, TextAlignmentOptions.Right, new Vector2(0.96f, 0.5f));
+
+                var center = CreatePanel("MenuCenter", safe, new Vector2(0.08f, 0.28f), new Vector2(0.92f, 0.82f), new Color(0.04f, 0.07f, 0.18f, 0.65f));
+                TMP_Text title = CreateText("Title", center, "LUDO ROYAL", 112, TextAlignmentOptions.Center, new Vector2(0.5f, 0.78f));
+
+                Button playButton = CreateButton("PlayButton", center, "Play", new Vector2(0.5f, 0.45f), new Vector2(500f, 150f));
+                Button settingsButton = CreateButton("SettingsButton", center, "Settings", new Vector2(0.5f, 0.24f), new Vector2(420f, 120f));
+
+                GameObject settingsPanel = CreatePanel("SettingsPanel", center, new Vector2(0.14f, 0.05f), new Vector2(0.86f, 0.18f), new Color(0f, 0f, 0f, 0.45f)).gameObject;
+                settingsPanel.SetActive(false);
+                CreateText("SettingsHint", settingsPanel.transform as RectTransform, "Audio / Notifications (stub)", 34, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f));
+
+                var roomPanel = CreatePanel("RoomPanel", safe, new Vector2(0.04f, 0.03f), new Vector2(0.96f, 0.26f), new Color(0.03f, 0.04f, 0.1f, 0.75f));
+                TMP_InputField roomInput = CreateInputField("RoomNameInput", roomPanel, "Private Room Name", new Vector2(0.5f, 0.8f), new Vector2(700f, 95f));
+                Button low = CreateButton("LowCoinRoom", roomPanel, "Low Coin Room", new Vector2(0.2f, 0.46f), new Vector2(300f, 95f));
+                Button med = CreateButton("MediumCoinRoom", roomPanel, "Medium Coin Room", new Vector2(0.5f, 0.46f), new Vector2(300f, 95f));
+                Button high = CreateButton("HighCoinRoom", roomPanel, "High Coin Room", new Vector2(0.8f, 0.46f), new Vector2(300f, 95f));
+                Button priv = CreateButton("PrivateRoom", roomPanel, "Private Room", new Vector2(0.5f, 0.16f), new Vector2(300f, 90f));
+                TMP_Text roomListText = CreateText("RoomList", roomPanel, "", 28, TextAlignmentOptions.Center, new Vector2(0.5f, -0.02f));
+
+                var mainMenuUI = center.gameObject.AddComponent<MainMenuUI>();
+                SetPrivateField(mainMenuUI, "playButton", playButton);
+                SetPrivateField(mainMenuUI, "settingsButton", settingsButton);
+                SetPrivateField(mainMenuUI, "settingsPanel", settingsPanel);
+                SetPrivateField(mainMenuUI, "titleText", title);
+                SetPrivateField(mainMenuUI, "coinText", coinText);
+                SetPrivateField(mainMenuUI, "coinManager", coinManager);
+
+                var roomUI = roomPanel.gameObject.AddComponent<RoomSelectionUI>();
+                SetPrivateField(roomUI, "roomManager", roomManager);
+                SetPrivateField(roomUI, "roomNameInput", roomInput);
+                SetPrivateField(roomUI, "roomListText", roomListText);
+                SetPrivateField(roomUI, "lowCoinRoomButton", low);
+                SetPrivateField(roomUI, "mediumCoinRoomButton", med);
+                SetPrivateField(roomUI, "highCoinRoomButton", high);
+                SetPrivateField(roomUI, "privateRoomButton", priv);
+            }
+        }
+
+        private static class GameSceneRuntimeBuilder
+        {
+            public static void Build()
+            {
+                EnsureEventSystem();
+                EnsureManagers();
+                Canvas canvas = EnsureCanvas();
+                RectTransform safe = CreateSafeArea(canvas.transform);
+                BoardPathData pathData = ScriptableObject.CreateInstance<BoardPathData>();
+
+                var boardRoot = new GameObject("LudoBoard", typeof(BoardVisualGenerator)).transform;
+                var boardGenerator = boardRoot.GetComponent<BoardVisualGenerator>();
+                SetPrivateField(boardGenerator, "boardPathData", pathData);
+                boardGenerator.GenerateBoardVisuals();
+
+                var boardManager = boardRoot.gameObject.AddComponent<BoardManager>();
+                SetPrivateField(boardManager, "boardPathData", pathData);
+
+                var tokenRoot = new GameObject("TokenRoot").transform;
+                var tokenSystem = new GameObject("TokenSystem").AddComponent<TokenSystem>();
+                SetPrivateField(tokenSystem, "boardManager", boardManager);
+                SetPrivateField(tokenSystem, "tokenRoot", tokenRoot);
+
+                var turnSystem = new GameObject("TurnSystem").AddComponent<TurnSystem>();
+                SetPrivateField(turnSystem, "tokenSystem", tokenSystem);
+
+                var winSystem = new GameObject("WinSystem").AddComponent<WinSystem>();
+                var sync = Object.FindObjectOfType<MultiplayerSyncManager>();
+                if (sync == null) sync = new GameObject("MultiplayerSyncManager").AddComponent<MultiplayerSyncManager>();
+
+                var gameManager = new GameObject("GameManager").AddComponent<GameManager>();
+                SetPrivateField(gameManager, "turnSystem", turnSystem);
+                SetPrivateField(gameManager, "tokenSystem", tokenSystem);
+                SetPrivateField(gameManager, "winSystem", winSystem);
+                SetPrivateField(gameManager, "multiplayerSync", sync);
+
+                var tokenSpawner = new GameObject("TokenSpawner").AddComponent<TokenSpawner>();
+                tokenSpawner.BuildDefaultTokens(tokenRoot, tokenSystem);
+
+                BuildHudAndDice(safe, Object.FindObjectOfType<CoinManager>());
+                BuildWinBanner(safe);
+            }
+
+            private static void BuildHudAndDice(RectTransform root, CoinManager coinManager)
+            {
+                RectTransform hud = CreatePanel("HUD", root, new Vector2(0f, 0.86f), new Vector2(1f, 1f), new Color(0.06f, 0.08f, 0.18f, 0.92f));
+                TMP_Text coinText = CreateText("CoinText", hud, "Coins: 0", 46, TextAlignmentOptions.Left, new Vector2(0.09f, 0.5f));
+                TMP_Text turnText = CreateText("TurnText", hud, "Turn: Red", 46, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f));
+                TMP_Text resultText = CreateText("ResultText", hud, "", 30, TextAlignmentOptions.Right, new Vector2(0.94f, 0.5f));
+
+                Button diceButton = CreateButton("DiceButton", hud, "Roll", new Vector2(0.88f, 0.5f), new Vector2(170f, 100f));
+                TMP_Text faceText = diceButton.GetComponentInChildren<TMP_Text>();
+
+                var diceController = diceButton.gameObject.AddComponent<DiceController>();
+                SetPrivateField(diceController, "diceButton", diceButton);
+
+                var diceVisual = diceButton.gameObject.AddComponent<DiceVisualUI>();
+                SetPrivateField(diceVisual, "diceButton", diceButton);
+                SetPrivateField(diceVisual, "faceText", faceText);
+                SetPrivateField(diceVisual, "diceTransform", diceButton.transform as RectTransform);
+
+                var hudController = hud.gameObject.AddComponent<HUDController>();
+                SetPrivateField(hudController, "coinText", coinText);
+                SetPrivateField(hudController, "turnText", turnText);
+                SetPrivateField(hudController, "resultText", resultText);
+                SetPrivateField(hudController, "diceButton", diceButton);
+
+                coinManager.NotifyBalance("P1");
+            }
+
+            private static void BuildWinBanner(RectTransform root)
+            {
+                RectTransform banner = CreatePanel("WinCelebration", root, new Vector2(0.17f, 0.42f), new Vector2(0.83f, 0.56f), new Color(1f, 0.85f, 0.18f, 0.2f));
+                TMP_Text text = CreateText("WinText", banner, "Victory!", 82, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f));
+                text.color = new Color(1f, 0.85f, 0.18f, 0.2f);
+                var celebration = banner.gameObject.AddComponent<WinCelebrationUI>();
+                SetPrivateField(celebration, "label", text);
+                banner.gameObject.SetActive(true);
+            }
+
+            private static void EnsureManagers()
+            {
+                if (Object.FindObjectOfType<CoinManager>() == null)
+                {
+                    new GameObject("CoinManager").AddComponent<CoinManager>();
+                }
+
+                if (Object.FindObjectOfType<RoomManager>() == null)
+                {
+                    new GameObject("RoomManager").AddComponent<RoomManager>();
+                }
+            }
+        }
+
+        private static Canvas EnsureCanvas()
+        {
+            Canvas existing = Object.FindObjectOfType<Canvas>();
+            if (existing != null) return existing;
+
+            var canvasGo = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(MobilePortraitSetup));
+            var canvas = canvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            var scaler = canvasGo.GetComponent<CanvasScaler>();
+            var portrait = canvasGo.GetComponent<MobilePortraitSetup>();
+            portrait.Configure(scaler);
+            return canvas;
+        }
+
+        private static RectTransform CreateSafeArea(Transform parent)
+        {
+            Transform existing = parent.Find("SafeArea");
+            if (existing != null) return existing as RectTransform;
+
+            RectTransform safeArea = new GameObject("SafeArea", typeof(RectTransform)).GetComponent<RectTransform>();
+            safeArea.SetParent(parent, false);
+            safeArea.anchorMin = Vector2.zero;
+            safeArea.anchorMax = Vector2.one;
+            safeArea.offsetMin = Vector2.zero;
+            safeArea.offsetMax = Vector2.zero;
+
+            var setup = parent.GetComponent<MobilePortraitSetup>();
+            if (setup != null)
+            {
+                setup.Configure(parent.GetComponent<CanvasScaler>(), safeArea);
+            }
+
+            return safeArea;
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (Object.FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null)
+            {
+                new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem), typeof(UnityEngine.EventSystems.StandaloneInputModule));
+            }
+        }
+
+        private static RectTransform CreatePanel(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Color color)
+        {
+            var rt = new GameObject(name, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            rt.SetParent(parent, false);
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.GetComponent<Image>().color = color;
+            return rt;
+        }
+
+        private static TMP_Text CreateText(string name, RectTransform parent, string value, float fontSize, TextAlignmentOptions alignment, Vector2 anchor)
+        {
+            var text = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
+            text.transform.SetParent(parent, false);
+            text.text = value;
+            text.fontSize = fontSize;
+            text.alignment = alignment;
+            text.color = Color.white;
+
+            RectTransform rt = text.rectTransform;
+            rt.anchorMin = anchor;
+            rt.anchorMax = anchor;
+            rt.sizeDelta = new Vector2(620f, 120f);
+            rt.anchoredPosition = Vector2.zero;
+            return text;
+        }
+
+        private static Button CreateButton(string name, RectTransform parent, string label, Vector2 anchor, Vector2 size)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(parent, false);
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.sizeDelta = size;
+            rect.anchoredPosition = Vector2.zero;
+
+            var img = go.GetComponent<Image>();
+            img.color = new Color(1f, 1f, 1f, 0.95f);
+
+            TMP_Text txt = CreateText("Label", rect, label, 42, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f));
+            txt.color = new Color(0.1f, 0.1f, 0.14f);
+
+            return go.GetComponent<Button>();
+        }
+
+        private static TMP_InputField CreateInputField(string name, RectTransform parent, string placeholder, Vector2 anchor, Vector2 size)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(TMP_InputField));
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(parent, false);
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.sizeDelta = size;
+            rect.anchoredPosition = Vector2.zero;
+            go.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.95f);
+
+            TMP_Text inputText = CreateText("Text", rect, string.Empty, 30, TextAlignmentOptions.Left, new Vector2(0.03f, 0.5f));
+            TMP_Text placeholderText = CreateText("Placeholder", rect, placeholder, 30, TextAlignmentOptions.Left, new Vector2(0.03f, 0.5f));
+            placeholderText.color = new Color(0.55f, 0.55f, 0.55f);
+
+            var input = go.GetComponent<TMP_InputField>();
+            input.textViewport = rect;
+            input.textComponent = inputText;
+            input.placeholder = placeholderText;
+            return input;
+        }
+
+        private static void SetPrivateField<TObj, TValue>(TObj obj, string fieldName, TValue value)
+        {
+            var field = typeof(TObj).GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            field?.SetValue(obj, value);
+        }
+    }
+}

@@ -27,7 +27,7 @@ namespace LudoMaster.UI
 
             if (titleText != null && string.IsNullOrEmpty(titleText.text))
             {
-                titleText.text = "Ludo Master";
+                titleText.text = "LUDO ROYAL";
             }
 
             RefreshCoins();

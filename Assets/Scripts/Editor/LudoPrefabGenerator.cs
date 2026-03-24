@@ -26,6 +26,7 @@ namespace LudoMaster.EditorTools
             CreateTokenPrefab(PlayerColor.Green, new Color(0.2f, 0.73f, 0.27f));
             CreateTokenPrefab(PlayerColor.Yellow, new Color(0.95f, 0.85f, 0.17f));
             CreateDiceButtonPrefab();
+            CreateBoardPrefab();
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -74,6 +75,31 @@ namespace LudoMaster.EditorTools
             Object.DestroyImmediate(go);
         }
 
+
+        private static void CreateBoardPrefab()
+        {
+            var board = new GameObject("LudoBoard", typeof(BoardVisualGenerator), typeof(BoardManager));
+            var generator = board.GetComponent<BoardVisualGenerator>();
+            var pathData = ScriptableObject.CreateInstance<BoardPathData>();
+
+            var pathAssetPath = "Assets/Prefabs/Generated/BoardPathData.asset";
+            AssetDatabase.CreateAsset(pathData, pathAssetPath);
+
+            var soGen = new SerializedObject(generator);
+            soGen.FindProperty("boardPathData").objectReferenceValue = pathData;
+            soGen.ApplyModifiedPropertiesWithoutUndo();
+
+            var manager = board.GetComponent<BoardManager>();
+            var soMgr = new SerializedObject(manager);
+            soMgr.FindProperty("boardPathData").objectReferenceValue = pathData;
+            soMgr.ApplyModifiedPropertiesWithoutUndo();
+
+            generator.GenerateBoardVisuals();
+
+            string prefabPath = $"{OutputPath}/LudoBoard.prefab";
+            PrefabUtility.SaveAsPrefabAsset(board, prefabPath);
+            Object.DestroyImmediate(board);
+        }
         private static Sprite CreateCircleSprite()
         {
             var tex = new Texture2D(64, 64, TextureFormat.RGBA32, false);
