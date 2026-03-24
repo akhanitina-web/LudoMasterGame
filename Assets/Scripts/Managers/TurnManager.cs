@@ -6,13 +6,19 @@ using UnityEngine;
 namespace LudoMaster.Managers
 {
     /// <summary>
-    /// Manager wrapper over TurnSystem to keep scene architecture manager-centric.
+    /// Turn orchestrator wrapper over <see cref="TurnSystem"/> with optional Photon turn sync hooks.
     /// </summary>
     public class TurnManager : MonoBehaviour
     {
         [SerializeField] private TurnSystem turnSystem;
+        [SerializeField] private PhotonManager photonManager;
 
         public PlayerData CurrentPlayer => turnSystem == null ? null : turnSystem.CurrentPlayer;
+
+        private void Awake()
+        {
+            photonManager ??= FindObjectOfType<PhotonManager>();
+        }
 
         public void RegisterTurnSystem(TurnSystem system)
         {
@@ -32,11 +38,23 @@ namespace LudoMaster.Managers
         public void ResolveTurn(TurnResult result)
         {
             turnSystem?.ResolveTurn(result);
+            BroadcastCurrentTurnIndex();
         }
 
         public void SkipCurrentPlayer()
         {
             turnSystem?.SkipCurrentPlayer();
+            BroadcastCurrentTurnIndex();
+        }
+
+        private void BroadcastCurrentTurnIndex()
+        {
+            if (photonManager == null || CurrentPlayer == null)
+            {
+                return;
+            }
+
+            photonManager.SendTurnChange((int)CurrentPlayer.Color);
         }
     }
 }

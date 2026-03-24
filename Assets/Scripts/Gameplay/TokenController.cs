@@ -29,6 +29,12 @@ namespace LudoMaster.Gameplay
         public Vector3 SpawnPosition { get; private set; }
         public bool IsSelectable { get; private set; }
 
+        // Compatibility fields requested by design docs.
+        public PlayerColor playerColor => OwnerColor;
+        public int currentTileIndex => Data == null ? -1 : Data.BoardIndex;
+        public bool isInHome => Data != null && (Data.State == TokenState.InHomePath || Data.State == TokenState.Finished);
+        public bool isFinished => Data != null && Data.State == TokenState.Finished;
+
         private void Awake()
         {
             if (spriteRenderer == null)

@@ -7,23 +7,26 @@ using UnityEngine.UI;
 namespace LudoMaster.UI
 {
     /// <summary>
-    /// Main menu logic with play flow, coin display, and settings panel toggles.
+    /// Main menu flow for online play entry, coin display, settings and shop buttons.
     /// </summary>
     public class MainMenuUI : MonoBehaviour
     {
-        [SerializeField] private Button playButton;
+        [SerializeField] private Button playOnlineButton;
         [SerializeField] private Button settingsButton;
+        [SerializeField] private Button shopButton;
         [SerializeField] private GameObject settingsPanel;
+        [SerializeField] private GameObject shopPanel;
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private TMP_Text coinText;
         [SerializeField] private CoinManager coinManager;
         [SerializeField] private string localPlayerId = "P1";
-        [SerializeField] private string gameplaySceneName = "GameScene";
+        [SerializeField] private string lobbySceneName = "GameScene";
 
         private void Awake()
         {
-            if (playButton != null) playButton.onClick.AddListener(OnPlayPressed);
+            if (playOnlineButton != null) playOnlineButton.onClick.AddListener(OnPlayOnlinePressed);
             if (settingsButton != null) settingsButton.onClick.AddListener(ToggleSettingsPanel);
+            if (shopButton != null) shopButton.onClick.AddListener(ToggleShopPanel);
 
             if (titleText != null && string.IsNullOrEmpty(titleText.text))
             {
@@ -42,11 +45,11 @@ namespace LudoMaster.UI
         }
 
         /// <summary>
-        /// Loads gameplay scene in portrait mobile flow.
+        /// Loads the lobby/gameplay scene for online matchmaking.
         /// </summary>
-        public void OnPlayPressed()
+        public void OnPlayOnlinePressed()
         {
-            SceneManager.LoadScene(gameplaySceneName);
+            SceneManager.LoadScene(lobbySceneName);
         }
 
         public void ToggleSettingsPanel()
@@ -54,6 +57,14 @@ namespace LudoMaster.UI
             if (settingsPanel != null)
             {
                 settingsPanel.SetActive(!settingsPanel.activeSelf);
+            }
+        }
+
+        public void ToggleShopPanel()
+        {
+            if (shopPanel != null)
+            {
+                shopPanel.SetActive(!shopPanel.activeSelf);
             }
         }
     }

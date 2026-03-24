@@ -18,6 +18,7 @@ namespace LudoMaster.Managers
         [SerializeField] private MultiplayerSyncManager multiplayerSync;
         [SerializeField] private TokenSpawner tokenSpawner;
         [SerializeField] private RoomManager roomManager;
+        [SerializeField] private PhotonManager photonManager;
 
         private readonly List<PlayerData> players = new();
         private int pendingDiceValue = -1;
@@ -60,6 +61,7 @@ namespace LudoMaster.Managers
             BootstrapPlayers();
             EnsureTokensReady();
             roomManager = roomManager ?? FindObjectOfType<RoomManager>();
+            photonManager = photonManager ?? FindObjectOfType<PhotonManager>();
             turnManager.Initialize(players);
             GameSignals.OnMatchStateChanged?.Invoke(MatchState.Playing);
         }
@@ -147,6 +149,7 @@ namespace LudoMaster.Managers
             tokenManager.SetSelectableForAll(false);
             StartCoroutine(tokenManager.MoveToken(current, token, pendingDiceValue, OnTurnResolved));
             multiplayerSync?.BroadcastMove(current.PlayerId, token.TokenId, pendingDiceValue);
+            photonManager?.SendTokenMove(current.PlayerId, token.TokenId, pendingDiceValue);
         }
 
         private void OnTurnResolved(TurnResult result)

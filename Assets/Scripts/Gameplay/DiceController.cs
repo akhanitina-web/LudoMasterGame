@@ -5,12 +5,13 @@ using UnityEngine.UI;
 namespace LudoMaster.Gameplay
 {
     /// <summary>
-    /// Compatibility component that forwards dice interaction to DiceManager.
+    /// Dice button controller that rolls local dice and broadcasts result in multiplayer.
     /// </summary>
     public class DiceController : MonoBehaviour
     {
         [SerializeField] private DiceManager diceManager;
         [SerializeField] private Button diceButton;
+        [SerializeField] private PhotonManager photonManager;
 
         private void Awake()
         {
@@ -29,15 +30,29 @@ namespace LudoMaster.Gameplay
                 diceButton = GetComponent<Button>();
             }
 
+            photonManager ??= FindObjectOfType<PhotonManager>();
+
             if (diceButton != null)
             {
                 diceManager.Configure(diceButton);
             }
+
+            LudoMaster.Signals.GameSignals.OnDiceRolled += BroadcastDice;
+        }
+
+        private void OnDestroy()
+        {
+            LudoMaster.Signals.GameSignals.OnDiceRolled -= BroadcastDice;
         }
 
         public void RollDice()
         {
             diceManager?.RollDice();
+        }
+
+        private void BroadcastDice(int value)
+        {
+            photonManager?.SendDiceRoll(value);
         }
     }
 }
