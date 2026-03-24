@@ -13,6 +13,7 @@ namespace LudoMaster.Core
         public int MaxPlayers = 4;
         public int EntryFee;
         public int WinReward;
+        public int CurrentPot;
 
         public readonly List<string> PlayerIds = new();
 

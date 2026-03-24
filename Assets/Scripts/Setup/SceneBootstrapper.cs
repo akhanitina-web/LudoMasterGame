@@ -58,6 +58,7 @@ namespace LudoMaster.Setup
                 Button high = CreateButton("HighCoinRoom", roomPanel, "High Coin Room", new Vector2(0.8f, 0.46f), new Vector2(300f, 95f));
                 Button priv = CreateButton("PrivateRoom", roomPanel, "Private Room", new Vector2(0.5f, 0.16f), new Vector2(300f, 90f));
                 TMP_Text roomListText = CreateText("RoomList", roomPanel, string.Empty, 28, TextAlignmentOptions.Center, new Vector2(0.5f, -0.02f));
+                TMP_Text roomStatusText = CreateText("RoomStatus", roomPanel, "Select a room to play", 26, TextAlignmentOptions.Center, new Vector2(0.5f, 0.68f));
 
                 MainMenuUI mainMenuUI = center.gameObject.AddComponent<MainMenuUI>();
                 SetPrivateField(mainMenuUI, "playButton", playButton);
@@ -71,6 +72,7 @@ namespace LudoMaster.Setup
                 SetPrivateField(roomUI, "roomManager", roomManager);
                 SetPrivateField(roomUI, "roomNameInput", roomInput);
                 SetPrivateField(roomUI, "roomListText", roomListText);
+                SetPrivateField(roomUI, "statusText", roomStatusText);
                 SetPrivateField(roomUI, "lowCoinRoomButton", low);
                 SetPrivateField(roomUI, "mediumCoinRoomButton", med);
                 SetPrivateField(roomUI, "highCoinRoomButton", high);
@@ -119,6 +121,9 @@ namespace LudoMaster.Setup
                 TurnSystem turnSystem = GetOrCreateComponent<TurnSystem>("TurnSystem", sceneRoot);
                 SetPrivateField(turnSystem, "tokenSystem", tokenSystem);
 
+                TokenManager tokenManager = GetOrCreateComponent<TokenManager>("TokenManager", sceneRoot);
+                tokenManager.RegisterTokenSystem(tokenSystem);
+
                 WinSystem winSystem = GetOrCreateComponent<WinSystem>("WinSystem", sceneRoot);
                 MultiplayerSyncManager sync = Object.FindObjectOfType<MultiplayerSyncManager>() ?? new GameObject("MultiplayerSyncManager").AddComponent<MultiplayerSyncManager>();
                 sync.transform.SetParent(sceneRoot, false);
@@ -126,6 +131,7 @@ namespace LudoMaster.Setup
                 GameManager gameManager = GetOrCreateComponent<GameManager>("GameManager", sceneRoot);
                 SetPrivateField(gameManager, "turnSystem", turnSystem);
                 SetPrivateField(gameManager, "tokenSystem", tokenSystem);
+                SetPrivateField(gameManager, "tokenManager", tokenManager);
                 SetPrivateField(gameManager, "winSystem", winSystem);
                 SetPrivateField(gameManager, "multiplayerSync", sync);
 
@@ -148,6 +154,7 @@ namespace LudoMaster.Setup
                 TMP_Text coinText = CreateText("CoinText", topHud, "Coins: 0", 42, TextAlignmentOptions.Left, new Vector2(0.12f, 0.52f));
                 TMP_Text turnIndicator = CreateText("TurnIndicator", topHud, "Turn: Red", 44, TextAlignmentOptions.Center, new Vector2(0.5f, 0.52f));
                 TMP_Text resultText = CreateText("ResultText", topHud, string.Empty, 30, TextAlignmentOptions.Right, new Vector2(0.95f, 0.52f));
+                TMP_Text roomText = CreateText("RoomText", topHud, "Room: Not Joined", 26, TextAlignmentOptions.Center, new Vector2(0.5f, 0.15f));
 
                 RectTransform diceParent = CreatePanel("DiceWidget", uiRoot, new Vector2(0.39f, 0.1f), new Vector2(0.61f, 0.2f), new Color(1f, 1f, 1f, 0.97f));
                 TMP_Text faceText = CreateText("DiceFace", diceParent, "⚀", 92, TextAlignmentOptions.Center, new Vector2(0.5f, 0.64f));
@@ -158,8 +165,12 @@ namespace LudoMaster.Setup
                 RectTransform rollButtonRoot = CreatePanel("DiceButton", uiRoot, new Vector2(0.34f, 0.03f), new Vector2(0.66f, 0.1f), Color.clear);
                 Button diceButton = CreateButton("RollButton", rollButtonRoot, "Roll", new Vector2(0.5f, 0.5f), new Vector2(300f, 110f));
 
+                DiceManager diceManager = diceButton.gameObject.GetComponent<DiceManager>() ?? diceButton.gameObject.AddComponent<DiceManager>();
+                diceManager.Configure(diceButton);
+
                 DiceController diceController = diceButton.gameObject.GetComponent<DiceController>() ?? diceButton.gameObject.AddComponent<DiceController>();
                 SetPrivateField(diceController, "diceButton", diceButton);
+                SetPrivateField(diceController, "diceManager", diceManager);
 
                 DiceVisualUI diceVisual = diceButton.gameObject.GetComponent<DiceVisualUI>() ?? diceButton.gameObject.AddComponent<DiceVisualUI>();
                 SetPrivateField(diceVisual, "diceButton", diceButton);
@@ -173,6 +184,9 @@ namespace LudoMaster.Setup
                 SetPrivateField(hudController, "turnText", turnIndicator);
                 SetPrivateField(hudController, "resultText", resultText);
                 SetPrivateField(hudController, "diceButton", diceButton);
+
+                UIManager uiManager = topHud.gameObject.GetComponent<UIManager>() ?? topHud.gameObject.AddComponent<UIManager>();
+                uiManager.ConfigureHud(coinText, turnIndicator, resultText, roomText);
 
                 coinManager?.NotifyBalance("P1");
             }
