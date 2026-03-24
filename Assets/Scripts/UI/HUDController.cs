@@ -43,10 +43,16 @@ namespace LudoMaster.UI
 
         private void HandleTurnChanged(PlayerColor color)
         {
-            if (turnText != null)
+            if (turnText == null) return;
+            turnText.text = $"Turn: {color}";
+            turnText.color = color switch
             {
-                turnText.text = $"Turn: {color}";
-            }
+                PlayerColor.Red => new Color(0.93f, 0.22f, 0.24f),
+                PlayerColor.Blue => new Color(0.16f, 0.47f, 0.96f),
+                PlayerColor.Green => new Color(0.2f, 0.73f, 0.27f),
+                PlayerColor.Yellow => new Color(0.95f, 0.85f, 0.17f),
+                _ => Color.white
+            };
         }
 
         private void HandleRankAssigned(PlayerColor color, int rank)
