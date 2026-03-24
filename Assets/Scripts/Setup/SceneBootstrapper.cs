@@ -93,7 +93,7 @@ namespace LudoMaster.Setup
                 BoardPathData pathData = ScriptableObject.CreateInstance<BoardPathData>();
 
                 Transform boardRoot = GetOrCreateTransform("LudoBoard", sceneRoot);
-                boardRoot.position = new Vector3(0f, -0.6f, 0f);
+                boardRoot.position = new Vector3(0f, -0.95f, 0f);
                 BoardVisualGenerator boardGenerator = boardRoot.GetComponent<BoardVisualGenerator>() ?? boardRoot.gameObject.AddComponent<BoardVisualGenerator>();
                 SetPrivateField(boardGenerator, "boardPathData", pathData);
                 SetPrivateField(boardGenerator, "boardBackgroundColor", new Color(0.16f, 0.2f, 0.27f, 1f));
@@ -135,19 +135,19 @@ namespace LudoMaster.Setup
             private static void BuildHud(RectTransform safeArea, CoinManager coinManager)
             {
                 RectTransform uiRoot = CreatePanel("UI", safeArea, Vector2.zero, Vector2.one, Color.clear);
-                RectTransform hud = CreatePanel("HUD", uiRoot, new Vector2(0.03f, 0.915f), new Vector2(0.97f, 0.99f), new Color(0.07f, 0.1f, 0.2f, 0.92f));
+                RectTransform hud = CreatePanel("HUD", uiRoot, new Vector2(0.03f, 0.935f), new Vector2(0.97f, 0.992f), new Color(0.07f, 0.1f, 0.2f, 0.92f));
 
                 TMP_Text coinText = CreateText("CoinText", hud, "Coins: 0", 42, TextAlignmentOptions.Left, new Vector2(0.12f, 0.52f));
                 TMP_Text turnIndicator = CreateText("TurnIndicator", hud, "Turn: Red", 44, TextAlignmentOptions.Center, new Vector2(0.5f, 0.52f));
                 TMP_Text resultText = CreateText("ResultText", hud, string.Empty, 30, TextAlignmentOptions.Right, new Vector2(0.95f, 0.52f));
 
-                RectTransform diceParent = CreatePanel("DiceWidget", uiRoot, new Vector2(0.78f, 0.785f), new Vector2(0.97f, 0.905f), new Color(1f, 1f, 1f, 0.94f));
+                RectTransform diceParent = CreatePanel("DiceWidget", uiRoot, new Vector2(0.74f, 0.79f), new Vector2(0.97f, 0.915f), new Color(1f, 1f, 1f, 0.96f));
                 TMP_Text faceText = CreateText("DiceFace", diceParent, "⚀", 96, TextAlignmentOptions.Center, new Vector2(0.33f, 0.5f));
                 faceText.color = new Color(0.08f, 0.1f, 0.15f, 1f);
                 TMP_Text valueText = CreateText("DiceValue", diceParent, "1", 52, TextAlignmentOptions.Center, new Vector2(0.77f, 0.5f));
                 valueText.color = new Color(0.12f, 0.15f, 0.2f, 1f);
 
-                RectTransform rollButtonRoot = CreatePanel("DiceButton", uiRoot, new Vector2(0.79f, 0.72f), new Vector2(0.96f, 0.78f), Color.clear);
+                RectTransform rollButtonRoot = CreatePanel("DiceButton", uiRoot, new Vector2(0.76f, 0.715f), new Vector2(0.96f, 0.785f), Color.clear);
                 Button diceButton = CreateButton("RollButton", rollButtonRoot, "Roll", new Vector2(0.5f, 0.5f), new Vector2(220f, 88f));
 
                 DiceController diceController = diceButton.gameObject.GetComponent<DiceController>() ?? diceButton.gameObject.AddComponent<DiceController>();
@@ -158,6 +158,7 @@ namespace LudoMaster.Setup
                 SetPrivateField(diceVisual, "faceText", faceText);
                 SetPrivateField(diceVisual, "valueText", valueText);
                 SetPrivateField(diceVisual, "diceTransform", diceButton.transform as RectTransform);
+                SetPrivateField(diceVisual, "diceBackground", diceButton.GetComponent<Image>());
 
                 HUDController hudController = hud.gameObject.GetComponent<HUDController>() ?? hud.gameObject.AddComponent<HUDController>();
                 SetPrivateField(hudController, "coinText", coinText);

@@ -13,6 +13,8 @@ namespace LudoMaster.Gameplay
         [SerializeField] private Color tokenShadowColor = new(0f, 0f, 0f, 0.2f);
         [SerializeField] private Vector3 tokenShadowOffset = new(0.06f, -0.07f, 0f);
         [SerializeField] private float tokenShadowScale = 0.92f;
+        [SerializeField] private Color tokenHighlightColor = new(1f, 1f, 1f, 0.6f);
+        [SerializeField] private float tokenHighlightScale = 1.2f;
         [Header("Optional token prefabs")]
         [SerializeField] private GameObject redTokenPrefab;
         [SerializeField] private GameObject blueTokenPrefab;
@@ -68,6 +70,11 @@ namespace LudoMaster.Gameplay
                     if (renderer != null && renderer.sprite != null && tokenObject.transform.Find("Shadow") == null)
                     {
                         CreateShadow(tokenObject.transform, renderer.sprite);
+                    }
+
+                    if (renderer != null && renderer.sprite != null && tokenObject.transform.Find("Highlight") == null)
+                    {
+                        CreateHighlight(tokenObject.transform, renderer.sprite);
                     }
 
                     TokenController token = tokenObject.GetComponent<TokenController>();
@@ -133,6 +140,20 @@ namespace LudoMaster.Gameplay
             shadowRenderer.sprite = tokenSprite;
             shadowRenderer.color = tokenShadowColor;
             shadowRenderer.sortingOrder = 1;
+        }
+
+        private void CreateHighlight(Transform tokenTransform, Sprite tokenSprite)
+        {
+            GameObject highlightObject = new("Highlight", typeof(SpriteRenderer));
+            highlightObject.transform.SetParent(tokenTransform, false);
+            highlightObject.transform.localPosition = Vector3.zero;
+            highlightObject.transform.localScale = Vector3.one * tokenHighlightScale;
+
+            SpriteRenderer highlightRenderer = highlightObject.GetComponent<SpriteRenderer>();
+            highlightRenderer.sprite = tokenSprite;
+            highlightRenderer.color = tokenHighlightColor;
+            highlightRenderer.sortingOrder = 0;
+            highlightRenderer.enabled = false;
         }
 
         private static Vector3 GetBaseCenter(PlayerColor color)

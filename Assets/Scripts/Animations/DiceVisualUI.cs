@@ -15,8 +15,11 @@ namespace LudoMaster.UI
         [SerializeField] private TMP_Text faceText;
         [SerializeField] private TMP_Text valueText;
         [SerializeField] private RectTransform diceTransform;
+        [SerializeField] private Image diceBackground;
         [SerializeField] private float rollingFlickerRate = 0.07f;
         [SerializeField] private float rollScale = 1.15f;
+        [SerializeField] private Color restingBackgroundColor = new(1f, 1f, 1f, 0.97f);
+        [SerializeField] private Color rollingBackgroundColor = new(0.93f, 0.96f, 1f, 1f);
 
         private Coroutine rollingRoutine;
         private Vector3 defaultScale = Vector3.one;
@@ -26,6 +29,11 @@ namespace LudoMaster.UI
             if (diceTransform == null && diceButton != null)
             {
                 diceTransform = diceButton.transform as RectTransform;
+            }
+
+            if (diceBackground == null && diceButton != null)
+            {
+                diceBackground = diceButton.GetComponent<Image>();
             }
 
             if (diceTransform != null)
@@ -68,6 +76,11 @@ namespace LudoMaster.UI
                     diceTransform.localScale = defaultScale;
                     diceTransform.localRotation = Quaternion.identity;
                 }
+
+                if (diceBackground != null)
+                {
+                    diceBackground.color = restingBackgroundColor;
+                }
             }
         }
 
@@ -89,6 +102,11 @@ namespace LudoMaster.UI
                 {
                     diceTransform.localScale = defaultScale * rollScale;
                     diceTransform.localRotation = Quaternion.Euler(0f, 0f, Random.Range(-18f, 18f));
+                }
+
+                if (diceBackground != null)
+                {
+                    diceBackground.color = Color.Lerp(rollingBackgroundColor, restingBackgroundColor, Random.value);
                 }
 
                 yield return new WaitForSeconds(rollingFlickerRate);
