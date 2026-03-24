@@ -37,9 +37,21 @@ namespace LudoMaster.Setup
         [ContextMenu("Build Example Board")]
         public void BuildExampleBoard()
         {
-            var boardGo = new GameObject("BoardVisuals", typeof(BoardVisualGenerator));
-            var generator = boardGo.GetComponent<BoardVisualGenerator>();
-            generator.GenerateBoardVisuals();
+            var boardGo = new GameObject("BoardPathRoot", typeof(BoardLayoutBuilder));
+            var builder = boardGo.GetComponent<BoardLayoutBuilder>();
+            var pathData = ScriptableObject.CreateInstance<BoardPathData>();
+            var boardManager = boardGo.AddComponent<BoardManager>();
+            var spriteCanvas = FindObjectOfType<Canvas>()?.transform;
+            if (spriteCanvas != null)
+            {
+                var boardImage = new GameObject("BoardSprite", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                boardImage.transform.SetParent(spriteCanvas, false);
+                boardImage.sprite = LudoSpriteFactory.GetBoardSprite();
+                boardImage.preserveAspect = true;
+            }
+            typeof(BoardLayoutBuilder).GetField("boardPathData", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(builder, pathData);
+            builder.BuildLayout();
+            typeof(BoardManager).GetField("boardPathData", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(boardManager, pathData);
         }
 
         private void BuildMainMenu(Transform root)

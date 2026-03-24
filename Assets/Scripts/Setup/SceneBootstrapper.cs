@@ -92,15 +92,14 @@ namespace LudoMaster.Setup
                 canvas.transform.SetParent(sceneRoot, false);
 
                 RectTransform safe = CreateSafeArea(canvas.transform);
-                BoardPathData pathData = ScriptableObject.CreateInstance<BoardPathData>();
+                BuildBoardImage(safe);
 
-                Transform boardRoot = GetOrCreateTransform("LudoBoard", sceneRoot);
+                BoardPathData pathData = ScriptableObject.CreateInstance<BoardPathData>();
+                Transform boardRoot = GetOrCreateTransform("BoardPathRoot", sceneRoot);
                 boardRoot.position = new Vector3(0f, -0.35f, 0f);
-                BoardVisualGenerator boardGenerator = boardRoot.GetComponent<BoardVisualGenerator>() ?? boardRoot.gameObject.AddComponent<BoardVisualGenerator>();
-                SetPrivateField(boardGenerator, "boardPathData", pathData);
-                SetPrivateField(boardGenerator, "boardBackgroundColor", new Color(0.16f, 0.2f, 0.27f, 1f));
-                SetPrivateField(boardGenerator, "boardSpriteOpacity", 0.92f);
-                boardGenerator.GenerateBoardVisuals();
+                BoardLayoutBuilder boardLayoutBuilder = boardRoot.GetComponent<BoardLayoutBuilder>() ?? boardRoot.gameObject.AddComponent<BoardLayoutBuilder>();
+                SetPrivateField(boardLayoutBuilder, "boardPathData", pathData);
+                boardLayoutBuilder.BuildLayout();
 
                 BoardManager boardManager = boardRoot.GetComponent<BoardManager>() ?? boardRoot.gameObject.AddComponent<BoardManager>();
                 SetPrivateField(boardManager, "boardPathData", pathData);
@@ -120,6 +119,8 @@ namespace LudoMaster.Setup
 
                 TurnSystem turnSystem = GetOrCreateComponent<TurnSystem>("TurnSystem", sceneRoot);
                 SetPrivateField(turnSystem, "tokenSystem", tokenSystem);
+                TurnManager turnManager = GetOrCreateComponent<TurnManager>("TurnManager", sceneRoot);
+                turnManager.RegisterTurnSystem(turnSystem);
 
                 TokenManager tokenManager = GetOrCreateComponent<TokenManager>("TokenManager", sceneRoot);
                 tokenManager.RegisterTokenSystem(tokenSystem);
@@ -129,21 +130,27 @@ namespace LudoMaster.Setup
                 sync.transform.SetParent(sceneRoot, false);
 
                 GameManager gameManager = GetOrCreateComponent<GameManager>("GameManager", sceneRoot);
-                SetPrivateField(gameManager, "turnSystem", turnSystem);
+                SetPrivateField(gameManager, "turnManager", turnManager);
                 SetPrivateField(gameManager, "tokenSystem", tokenSystem);
                 SetPrivateField(gameManager, "tokenManager", tokenManager);
                 SetPrivateField(gameManager, "winSystem", winSystem);
                 SetPrivateField(gameManager, "multiplayerSync", sync);
+                SetPrivateField(gameManager, "roomManager", Object.FindObjectOfType<RoomManager>());
 
                 TokenSpawner tokenSpawner = GetOrCreateComponent<TokenSpawner>("TokenSpawner", sceneRoot);
-                SetPrivateField(tokenSpawner, "redTokenPrefab", LoadGeneratedPrefab("Token_Red"));
-                SetPrivateField(tokenSpawner, "blueTokenPrefab", LoadGeneratedPrefab("Token_Blue"));
-                SetPrivateField(tokenSpawner, "greenTokenPrefab", LoadGeneratedPrefab("Token_Green"));
-                SetPrivateField(tokenSpawner, "yellowTokenPrefab", LoadGeneratedPrefab("Token_Yellow"));
                 tokenSpawner.BuildDefaultTokens(tokenContainer, tokenSystem);
 
                 BuildHud(safe, Object.FindObjectOfType<CoinManager>());
                 BuildVictoryPanel(safe);
+            }
+
+            private static void BuildBoardImage(RectTransform safeArea)
+            {
+                RectTransform board = CreatePanel("BoardSprite", safeArea, new Vector2(0.08f, 0.23f), new Vector2(0.92f, 0.83f), Color.white);
+                Image boardImage = board.GetComponent<Image>();
+                boardImage.sprite = LudoSpriteFactory.GetBoardSprite();
+                boardImage.type = Image.Type.Simple;
+                boardImage.preserveAspect = true;
             }
 
             private static void BuildHud(RectTransform safeArea, CoinManager coinManager)
@@ -156,14 +163,22 @@ namespace LudoMaster.Setup
                 TMP_Text resultText = CreateText("ResultText", topHud, string.Empty, 30, TextAlignmentOptions.Right, new Vector2(0.95f, 0.52f));
                 TMP_Text roomText = CreateText("RoomText", topHud, "Room: Not Joined", 26, TextAlignmentOptions.Center, new Vector2(0.5f, 0.15f));
 
-                RectTransform diceParent = CreatePanel("DiceWidget", uiRoot, new Vector2(0.39f, 0.1f), new Vector2(0.61f, 0.2f), new Color(1f, 1f, 1f, 0.97f));
-                TMP_Text faceText = CreateText("DiceFace", diceParent, "⚀", 92, TextAlignmentOptions.Center, new Vector2(0.5f, 0.64f));
-                faceText.color = new Color(0.08f, 0.1f, 0.15f, 1f);
-                TMP_Text valueText = CreateText("DiceValue", diceParent, "1", 46, TextAlignmentOptions.Center, new Vector2(0.5f, 0.24f));
+                RectTransform diceParent = CreatePanel("DiceWidget", uiRoot, new Vector2(0.42f, 0.1f), new Vector2(0.58f, 0.2f), new Color(1f, 1f, 1f, 0.97f));
+                Image faceImage = new GameObject("DiceFaceImage", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                RectTransform faceRect = faceImage.rectTransform;
+                faceRect.SetParent(diceParent, false);
+                faceRect.anchorMin = new Vector2(0.2f, 0.34f);
+                faceRect.anchorMax = new Vector2(0.8f, 0.95f);
+                faceRect.offsetMin = Vector2.zero;
+                faceRect.offsetMax = Vector2.zero;
+                faceImage.sprite = LudoSpriteFactory.GetDiceFaceSprite(1);
+                faceImage.preserveAspect = true;
+
+                TMP_Text valueText = CreateText("DiceValue", diceParent, "1", 46, TextAlignmentOptions.Center, new Vector2(0.5f, 0.2f));
                 valueText.color = new Color(0.12f, 0.15f, 0.2f, 1f);
 
                 RectTransform rollButtonRoot = CreatePanel("DiceButton", uiRoot, new Vector2(0.34f, 0.03f), new Vector2(0.66f, 0.1f), Color.clear);
-                Button diceButton = CreateButton("RollButton", rollButtonRoot, "Roll", new Vector2(0.5f, 0.5f), new Vector2(300f, 110f));
+                Button diceButton = CreateButton("RollButton", rollButtonRoot, "Roll Dice", new Vector2(0.5f, 0.5f), new Vector2(320f, 110f));
 
                 DiceManager diceManager = diceButton.gameObject.GetComponent<DiceManager>() ?? diceButton.gameObject.AddComponent<DiceManager>();
                 diceManager.Configure(diceButton);
@@ -174,10 +189,10 @@ namespace LudoMaster.Setup
 
                 DiceVisualUI diceVisual = diceButton.gameObject.GetComponent<DiceVisualUI>() ?? diceButton.gameObject.AddComponent<DiceVisualUI>();
                 SetPrivateField(diceVisual, "diceButton", diceButton);
-                SetPrivateField(diceVisual, "faceText", faceText);
+                SetPrivateField(diceVisual, "faceImage", faceImage);
                 SetPrivateField(diceVisual, "valueText", valueText);
-                SetPrivateField(diceVisual, "diceTransform", diceButton.transform as RectTransform);
-                SetPrivateField(diceVisual, "diceBackground", diceButton.GetComponent<Image>());
+                SetPrivateField(diceVisual, "diceTransform", diceParent);
+                SetPrivateField(diceVisual, "diceBackground", diceParent.GetComponent<Image>());
 
                 HUDController hudController = topHud.gameObject.GetComponent<HUDController>() ?? topHud.gameObject.AddComponent<HUDController>();
                 SetPrivateField(hudController, "coinText", coinText);
