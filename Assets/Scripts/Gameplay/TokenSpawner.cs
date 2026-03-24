@@ -9,7 +9,7 @@ namespace LudoMaster.Gameplay
     /// </summary>
     public class TokenSpawner : MonoBehaviour
     {
-        [SerializeField] private float spacing = 0.55f;
+        [SerializeField] private float spacing = 0.62f;
         [SerializeField] private Color tokenShadowColor = new(0f, 0f, 0f, 0.2f);
         [SerializeField] private Vector3 tokenShadowOffset = new(0.06f, -0.07f, 0f);
         [SerializeField] private float tokenShadowScale = 0.92f;
@@ -52,12 +52,8 @@ namespace LudoMaster.Gameplay
                     SpriteRenderer renderer = tokenObject.GetComponent<SpriteRenderer>();
                     if (renderer != null)
                     {
-                        if (renderer.sprite == null)
-                        {
-                            renderer.sprite = BuildTokenSprite();
-                            renderer.color = tint;
-                        }
-
+                        renderer.sprite = BuildTokenSprite();
+                        renderer.color = tint;
                         renderer.sortingOrder = 2;
                     }
 
@@ -160,10 +156,10 @@ namespace LudoMaster.Gameplay
         {
             return color switch
             {
-                PlayerColor.Red => new Vector3(-3f, 3f),
-                PlayerColor.Green => new Vector3(3f, 3f),
-                PlayerColor.Blue => new Vector3(-3f, -3f),
-                PlayerColor.Yellow => new Vector3(3f, -3f),
+                PlayerColor.Red => new Vector3(-3.15f, 3.15f),
+                PlayerColor.Green => new Vector3(3.15f, 3.15f),
+                PlayerColor.Blue => new Vector3(-3.15f, -3.15f),
+                PlayerColor.Yellow => new Vector3(3.15f, -3.15f),
                 _ => Vector3.zero
             };
         }
