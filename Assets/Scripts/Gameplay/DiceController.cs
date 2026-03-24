@@ -20,8 +20,36 @@ namespace LudoMaster.Gameplay
 
         private void Awake()
         {
+            WireDiceButton();
+        }
+
+        private void OnValidate()
+        {
+            if (diceButton == null)
+            {
+                diceButton = GetComponent<Button>();
+            }
+        }
+
+        private void WireDiceButton()
+        {
+            if (diceButton == null)
+            {
+                diceButton = GetComponent<Button>();
+            }
+
+            if (diceButton == null)
+            {
+                var buttonInScene = GameObject.Find("RollButton");
+                if (buttonInScene != null)
+                {
+                    diceButton = buttonInScene.GetComponent<Button>();
+                }
+            }
+
             if (diceButton != null)
             {
+                diceButton.onClick.RemoveListener(RollDice);
                 diceButton.onClick.AddListener(RollDice);
             }
         }
