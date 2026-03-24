@@ -33,7 +33,8 @@ namespace LudoMaster.Managers
                 RoomId = System.Guid.NewGuid().ToString("N"),
                 RoomName = roomName,
                 EntryFee = entryFee,
-                WinReward = winReward
+                WinReward = winReward,
+                CurrentPot = 0
             };
 
             AvailableRooms.Add(room);
@@ -44,18 +45,18 @@ namespace LudoMaster.Managers
         public bool JoinRoom(string roomId, string playerId)
         {
             RoomData room = AvailableRooms.Find(r => r.RoomId == roomId);
-            if (room == null || !room.HasOpenSlot()) return false;
+            if (room == null || !room.HasOpenSlot() || room.PlayerIds.Contains(playerId))
+            {
+                return false;
+            }
 
             if (coinManager != null && !coinManager.TryPayEntryFee(playerId, room.EntryFee))
             {
                 return false;
             }
 
-            if (!room.PlayerIds.Contains(playerId))
-            {
-                room.PlayerIds.Add(playerId);
-            }
-
+            room.PlayerIds.Add(playerId);
+            room.CurrentPot += Mathf.Max(room.EntryFee, 0);
             CurrentRoom = room;
             GameSignals.OnRoomDataChanged?.Invoke();
             return true;
@@ -68,19 +69,28 @@ namespace LudoMaster.Managers
 
         public void RewardWinner(string playerId)
         {
-            if (CurrentRoom != null && coinManager != null)
+            if (CurrentRoom == null || coinManager == null)
             {
-                coinManager.AddCoins(playerId, CurrentRoom.WinReward);
+                return;
             }
+
+            int reward = Mathf.Max(CurrentRoom.CurrentPot, CurrentRoom.WinReward);
+            coinManager.AddCoins(playerId, reward);
+            CurrentRoom.CurrentPot = 0;
+            GameSignals.OnRoomDataChanged?.Invoke();
         }
 
         private void EnsureDefaultRooms()
         {
-            if (AvailableRooms.Count > 0) return;
-            CreateRoom("Low Coin Room", 25, 100);
-            CreateRoom("Medium Coin Room", 100, 400);
-            CreateRoom("High Coin Room", 500, 2400);
-            CreateRoom("Private Room", 200, 1000);
+            if (AvailableRooms.Count > 0)
+            {
+                return;
+            }
+
+            CreateRoom("Low Coin Room", 100, 400);
+            CreateRoom("Medium Coin Room", 300, 1200);
+            CreateRoom("High Coin Room", 700, 2800);
+            CreateRoom("Private Room", 500, 2000);
         }
     }
 }
