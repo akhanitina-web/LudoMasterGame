@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using LudoMaster.Core;
 using LudoMaster.Signals;
@@ -6,19 +7,28 @@ using UnityEngine;
 namespace LudoMaster.Managers
 {
     /// <summary>
-    /// Room lobby service for create/join flow, fee validation, and room presets.
+    /// Handles lobby/room state for local + Photon-backed flows:
+    /// create/join rooms, private room code, ready states, and host-only start checks.
     /// </summary>
     public class RoomManager : MonoBehaviour
     {
         [SerializeField] private CoinManager coinManager;
+        [SerializeField] private PhotonManager photonManager;
         [SerializeField] private string localPlayerId = "P1";
 
         public List<RoomData> AvailableRooms { get; } = new();
         public RoomData CurrentRoom { get; private set; }
+        public string CurrentRoomCode { get; private set; }
+
+        private readonly Dictionary<string, bool> readinessByPlayer = new();
+
+        public event Action PlayersUpdated;
+        public event Action<bool> StartAvailabilityChanged;
 
         private void Awake()
         {
             coinManager ??= FindObjectOfType<CoinManager>();
+            photonManager ??= FindObjectOfType<PhotonManager>();
             EnsureDefaultRooms();
         }
 
@@ -26,7 +36,7 @@ namespace LudoMaster.Managers
         {
             RoomData room = new()
             {
-                RoomId = System.Guid.NewGuid().ToString("N"),
+                RoomId = Guid.NewGuid().ToString("N"),
                 RoomName = roomName,
                 EntryFee = Mathf.Max(0, entryFee),
                 WinReward = Mathf.Max(0, winReward),
@@ -35,6 +45,14 @@ namespace LudoMaster.Managers
 
             AvailableRooms.Add(room);
             GameSignals.OnRoomDataChanged?.Invoke();
+            return room;
+        }
+
+        public RoomData CreatePrivateRoom(string roomName, int entryFee, int winReward, string roomCode = null)
+        {
+            RoomData room = CreateRoom(roomName, entryFee, winReward);
+            CurrentRoomCode = string.IsNullOrWhiteSpace(roomCode) ? GenerateRoomCode() : roomCode.Trim().ToUpperInvariant();
+            photonManager?.CreatePrivateRoom(CurrentRoomCode, (byte)room.MaxPlayers);
             return room;
         }
 
@@ -57,15 +75,73 @@ namespace LudoMaster.Managers
             }
 
             room.PlayerIds.Add(playerId);
+            readinessByPlayer[playerId] = false;
             room.CurrentPot += room.EntryFee;
             CurrentRoom = room;
+            CurrentRoomCode = CurrentRoomCode ?? GenerateRoomCode();
+
             GameSignals.OnRoomDataChanged?.Invoke();
+            PlayersUpdated?.Invoke();
+            NotifyStartState();
             return true;
         }
 
         public bool JoinRoomAsLocalPlayer(string roomId)
         {
             return JoinRoom(roomId, localPlayerId);
+        }
+
+        public bool JoinPrivateRoomByCode(string roomCode)
+        {
+            if (string.IsNullOrWhiteSpace(roomCode))
+            {
+                return false;
+            }
+
+            CurrentRoomCode = roomCode.Trim().ToUpperInvariant();
+            photonManager?.JoinRoomByCode(CurrentRoomCode);
+            return true;
+        }
+
+        public void SetReadyState(string playerId, bool isReady)
+        {
+            if (CurrentRoom == null || string.IsNullOrWhiteSpace(playerId) || !CurrentRoom.PlayerIds.Contains(playerId))
+            {
+                return;
+            }
+
+            readinessByPlayer[playerId] = isReady;
+            PlayersUpdated?.Invoke();
+            NotifyStartState();
+        }
+
+        public bool IsPlayerReady(string playerId)
+        {
+            return readinessByPlayer.TryGetValue(playerId, out bool ready) && ready;
+        }
+
+        public bool CanStartMatch(bool localPlayerIsHost)
+        {
+            if (!localPlayerIsHost || CurrentRoom == null || CurrentRoom.PlayerIds.Count < 2)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < CurrentRoom.PlayerIds.Count; i++)
+            {
+                string id = CurrentRoom.PlayerIds[i];
+                if (!IsPlayerReady(id))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public IReadOnlyList<string> GetPlayersInRoom()
+        {
+            return CurrentRoom?.PlayerIds;
         }
 
         public void RewardWinner(string playerId)
@@ -79,6 +155,23 @@ namespace LudoMaster.Managers
             coinManager.AddCoins(playerId, reward);
             CurrentRoom.CurrentPot = 0;
             GameSignals.OnRoomDataChanged?.Invoke();
+        }
+
+        private void NotifyStartState()
+        {
+            StartAvailabilityChanged?.Invoke(CanStartMatch(photonManager == null || photonManager.IsHost));
+        }
+
+        private static string GenerateRoomCode()
+        {
+            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            System.Text.StringBuilder sb = new(6);
+            for (int i = 0; i < 6; i++)
+            {
+                sb.Append(chars[UnityEngine.Random.Range(0, chars.Length)]);
+            }
+
+            return sb.ToString();
         }
 
         private void EnsureDefaultRooms()

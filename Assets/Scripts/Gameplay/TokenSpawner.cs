@@ -5,16 +5,18 @@ using UnityEngine;
 namespace LudoMaster.Gameplay
 {
     /// <summary>
-    /// Creates four colored token sets and registers them into TokenSystem.
+    /// Creates 4 tokens per player color using existing Art sprites and registers them in <see cref="TokenSystem"/>.
     /// </summary>
     public class TokenSpawner : MonoBehaviour
     {
         [SerializeField] private float spacing = 0.62f;
-        [SerializeField] private Color tokenShadowColor = new(0f, 0f, 0f, 0.2f);
-        [SerializeField] private Vector3 tokenShadowOffset = new(0.06f, -0.07f, 0f);
-        [SerializeField] private float tokenShadowScale = 0.92f;
-        [SerializeField] private Color tokenHighlightColor = new(1f, 1f, 1f, 0.6f);
-        [SerializeField] private float tokenHighlightScale = 1.2f;
+
+        [Header("Token sprites (auto-loaded from Assets/Art if missing)")]
+        [SerializeField] private Sprite redTokenSprite;
+        [SerializeField] private Sprite greenTokenSprite;
+        [SerializeField] private Sprite blueTokenSprite;
+        [SerializeField] private Sprite yellowTokenSprite;
+
         [Header("Optional token prefabs")]
         [SerializeField] private GameObject redTokenPrefab;
         [SerializeField] private GameObject blueTokenPrefab;
@@ -23,7 +25,7 @@ namespace LudoMaster.Gameplay
 
         private void Awake()
         {
-            TryLoadMissingPrefabs();
+            TryLoadMissingAssets();
         }
 
         public void BuildDefaultTokens(Transform tokenRoot, TokenSystem tokenSystem)
@@ -34,13 +36,12 @@ namespace LudoMaster.Gameplay
                 return;
             }
 
-            TryLoadMissingPrefabs();
+            TryLoadMissingAssets();
 
             var tokens = new List<TokenController>(16);
             foreach (PlayerColor color in System.Enum.GetValues(typeof(PlayerColor)))
             {
                 Vector3 center = GetBaseCenter(color);
-                Color tint = GetTint(color);
 
                 for (int i = 0; i < 4; i++)
                 {
@@ -50,27 +51,19 @@ namespace LudoMaster.Gameplay
                     tokenObject.transform.position = center + new Vector3(offset.x, offset.y, 0f);
 
                     SpriteRenderer renderer = tokenObject.GetComponent<SpriteRenderer>();
-                    if (renderer != null)
+                    if (renderer == null)
                     {
-                        renderer.sprite = BuildTokenSprite();
-                        renderer.color = tint;
-                        renderer.sortingOrder = 2;
+                        renderer = tokenObject.AddComponent<SpriteRenderer>();
                     }
+
+                    renderer.sprite = GetSpriteForColor(color);
+                    renderer.color = Color.white;
+                    renderer.sortingOrder = 2;
 
                     CircleCollider2D collider = tokenObject.GetComponent<CircleCollider2D>();
                     if (collider == null)
                     {
                         tokenObject.AddComponent<CircleCollider2D>();
-                    }
-
-                    if (renderer != null && renderer.sprite != null && tokenObject.transform.Find("Shadow") == null)
-                    {
-                        CreateShadow(tokenObject.transform, renderer.sprite);
-                    }
-
-                    if (renderer != null && renderer.sprite != null && tokenObject.transform.Find("Highlight") == null)
-                    {
-                        CreateHighlight(tokenObject.transform, renderer.sprite);
                     }
 
                     TokenController token = tokenObject.GetComponent<TokenController>();
@@ -110,46 +103,36 @@ namespace LudoMaster.Gameplay
             };
         }
 
-        private void OnValidate()
+        private Sprite GetSpriteForColor(PlayerColor color)
         {
-            TryLoadMissingPrefabs();
+            return color switch
+            {
+                PlayerColor.Red => redTokenSprite,
+                PlayerColor.Blue => blueTokenSprite,
+                PlayerColor.Green => greenTokenSprite,
+                PlayerColor.Yellow => yellowTokenSprite,
+                _ => null
+            };
         }
 
-        private void TryLoadMissingPrefabs()
+        private void OnValidate()
+        {
+            TryLoadMissingAssets();
+        }
+
+        private void TryLoadMissingAssets()
         {
 #if UNITY_EDITOR
             redTokenPrefab ??= UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Generated/Token_Red.prefab");
             blueTokenPrefab ??= UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Generated/Token_Blue.prefab");
             greenTokenPrefab ??= UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Generated/Token_Green.prefab");
             yellowTokenPrefab ??= UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Generated/Token_Yellow.prefab");
+
+            redTokenSprite ??= UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/red_token.png");
+            greenTokenSprite ??= UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/green_token.png");
+            blueTokenSprite ??= UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/blue_token.png");
+            yellowTokenSprite ??= UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/yellow_token.png");
 #endif
-        }
-
-        private void CreateShadow(Transform tokenTransform, Sprite tokenSprite)
-        {
-            GameObject shadowObject = new("Shadow", typeof(SpriteRenderer));
-            shadowObject.transform.SetParent(tokenTransform, false);
-            shadowObject.transform.localPosition = tokenShadowOffset;
-            shadowObject.transform.localScale = Vector3.one * tokenShadowScale;
-
-            SpriteRenderer shadowRenderer = shadowObject.GetComponent<SpriteRenderer>();
-            shadowRenderer.sprite = tokenSprite;
-            shadowRenderer.color = tokenShadowColor;
-            shadowRenderer.sortingOrder = 1;
-        }
-
-        private void CreateHighlight(Transform tokenTransform, Sprite tokenSprite)
-        {
-            GameObject highlightObject = new("Highlight", typeof(SpriteRenderer));
-            highlightObject.transform.SetParent(tokenTransform, false);
-            highlightObject.transform.localPosition = Vector3.zero;
-            highlightObject.transform.localScale = Vector3.one * tokenHighlightScale;
-
-            SpriteRenderer highlightRenderer = highlightObject.GetComponent<SpriteRenderer>();
-            highlightRenderer.sprite = tokenSprite;
-            highlightRenderer.color = tokenHighlightColor;
-            highlightRenderer.sortingOrder = 0;
-            highlightRenderer.enabled = false;
         }
 
         private static Vector3 GetBaseCenter(PlayerColor color)
@@ -162,45 +145,6 @@ namespace LudoMaster.Gameplay
                 PlayerColor.Yellow => new Vector3(3.15f, -3.15f),
                 _ => Vector3.zero
             };
-        }
-
-        private static Color GetTint(PlayerColor color)
-        {
-            return color switch
-            {
-                PlayerColor.Red => new Color(0.93f, 0.22f, 0.24f),
-                PlayerColor.Blue => new Color(0.16f, 0.47f, 0.96f),
-                PlayerColor.Green => new Color(0.2f, 0.73f, 0.27f),
-                PlayerColor.Yellow => new Color(0.95f, 0.85f, 0.17f),
-                _ => Color.white
-            };
-        }
-
-        private static Sprite circleSprite;
-
-        private static Sprite BuildTokenSprite()
-        {
-            if (circleSprite != null)
-            {
-                return circleSprite;
-            }
-
-            Texture2D texture = new(64, 64, TextureFormat.RGBA32, false);
-            Vector2 center = new(31.5f, 31.5f);
-            const float radius = 30f;
-
-            for (int x = 0; x < texture.width; x++)
-            {
-                for (int y = 0; y < texture.height; y++)
-                {
-                    float distance = Vector2.Distance(new Vector2(x, y), center);
-                    texture.SetPixel(x, y, distance <= radius ? Color.white : Color.clear);
-                }
-            }
-
-            texture.Apply();
-            circleSprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
-            return circleSprite;
         }
     }
 }
