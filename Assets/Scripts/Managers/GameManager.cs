@@ -13,6 +13,7 @@ namespace LudoMaster.Managers
     {
         [SerializeField] private TurnSystem turnSystem;
         [SerializeField] private TokenSystem tokenSystem;
+        [SerializeField] private TokenManager tokenManager;
         [SerializeField] private WinSystem winSystem;
         [SerializeField] private MultiplayerSyncManager multiplayerSync;
         [SerializeField] private TokenSpawner tokenSpawner;
@@ -22,7 +23,7 @@ namespace LudoMaster.Managers
         private bool isAwaitingTokenSelection;
         private bool isResolvingMove;
 
-        private bool IsReady => turnSystem != null && tokenSystem != null && winSystem != null;
+        private bool IsReady => turnSystem != null && tokenManager != null && winSystem != null;
         private void OnEnable()
         {
             GameSignals.OnDiceRolled += HandleDiceRolled;
@@ -37,6 +38,15 @@ namespace LudoMaster.Managers
 
         private void Start()
         {
+            tokenManager = tokenManager ?? FindObjectOfType<TokenManager>();
+            if (tokenManager == null)
+            {
+                tokenManager = new GameObject("TokenManager").AddComponent<TokenManager>();
+            }
+
+            tokenSystem = tokenSystem ?? FindObjectOfType<TokenSystem>();
+            tokenManager.RegisterTokenSystem(tokenSystem);
+
             if (!IsReady)
             {
                 Debug.LogWarning("GameManager is missing required system references.", this);
@@ -92,11 +102,11 @@ namespace LudoMaster.Managers
             var current = turnSystem.CurrentPlayer;
             pendingDiceValue = value;
             isAwaitingTokenSelection = true;
-            tokenSystem.SetSelectableForMove(current, value);
+            tokenManager.SetSelectableForMove(current, value);
 
             if (current.IsBot)
             {
-                var token = tokenSystem.GetFirstMovableToken(current, value);
+                var token = tokenManager.GetFirstMovableToken(current, value);
                 if (token != null)
                 {
                     HandleTokenSelected(current.Color, token.TokenId);
@@ -117,12 +127,12 @@ namespace LudoMaster.Managers
                 return;
             }
 
-            if (!tokenSystem.IsMovableToken(current, tokenId, pendingDiceValue))
+            if (!tokenManager.IsMovableToken(current, tokenId, pendingDiceValue))
             {
                 return;
             }
 
-            CoreTokenData token = tokenSystem.GetTokenData(current, tokenId);
+            CoreTokenData token = tokenManager.GetTokenData(current, tokenId);
             if (token == null)
             {
                 return;
@@ -130,8 +140,8 @@ namespace LudoMaster.Managers
 
             isAwaitingTokenSelection = false;
             isResolvingMove = true;
-            tokenSystem.SetSelectableForAll(false);
-            StartCoroutine(tokenSystem.MoveToken(current, token, pendingDiceValue, OnTurnResolved));
+            tokenManager.SetSelectableForAll(false);
+            StartCoroutine(tokenManager.MoveToken(current, token, pendingDiceValue, OnTurnResolved));
             multiplayerSync?.BroadcastMove(current.PlayerId, token.TokenId, pendingDiceValue);
         }
 
@@ -140,14 +150,14 @@ namespace LudoMaster.Managers
             pendingDiceValue = -1;
             isAwaitingTokenSelection = false;
             isResolvingMove = false;
-            tokenSystem.SetSelectableForAll(false);
+            tokenManager.SetSelectableForAll(false);
             turnSystem.ResolveTurn(result);
             winSystem.EvaluateRanks(players);
         }
 
         private void EnsureTokensReady()
         {
-            if (tokenSystem.TotalTokenCount > 0)
+            if (tokenManager.TotalTokenCount > 0)
             {
                 return;
             }
@@ -158,7 +168,7 @@ namespace LudoMaster.Managers
                 tokenSpawner = new GameObject("TokenSpawner").AddComponent<TokenSpawner>();
             }
 
-            tokenSpawner.BuildDefaultTokens(tokenSystem.EnsureTokenRoot(), tokenSystem);
+            tokenSpawner.BuildDefaultTokens(tokenManager.EnsureTokenRoot(), tokenSystem);
         }
     }
 }

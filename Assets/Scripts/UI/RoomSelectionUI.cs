@@ -13,6 +13,7 @@ namespace LudoMaster.UI
         [SerializeField] private RoomManager roomManager;
         [SerializeField] private TMP_InputField roomNameInput;
         [SerializeField] private TMP_Text roomListText;
+        [SerializeField] private TMP_Text statusText;
 
         [Header("Room Buttons")]
         [SerializeField] private Button lowCoinRoomButton;
@@ -22,10 +23,11 @@ namespace LudoMaster.UI
 
         private void Awake()
         {
-            if (lowCoinRoomButton != null) lowCoinRoomButton.onClick.AddListener(CreateLowCoinRoom);
-            if (mediumCoinRoomButton != null) mediumCoinRoomButton.onClick.AddListener(CreateMediumCoinRoom);
-            if (highCoinRoomButton != null) highCoinRoomButton.onClick.AddListener(CreateHighCoinRoom);
-            if (privateRoomButton != null) privateRoomButton.onClick.AddListener(CreatePrivateRoom);
+            if (lowCoinRoomButton != null) lowCoinRoomButton.onClick.AddListener(() => JoinByName("Low Coin Room"));
+            if (mediumCoinRoomButton != null) mediumCoinRoomButton.onClick.AddListener(() => JoinByName("Medium Coin Room"));
+            if (highCoinRoomButton != null) highCoinRoomButton.onClick.AddListener(() => JoinByName("High Coin Room"));
+            if (privateRoomButton != null) privateRoomButton.onClick.AddListener(JoinPrivateRoom);
+            RefreshButtonLabels();
         }
 
         private void OnEnable()
@@ -39,30 +41,69 @@ namespace LudoMaster.UI
             LudoMaster.Signals.GameSignals.OnRoomDataChanged -= RefreshRoomList;
         }
 
-        public void CreateLowCoinRoom() => CreateRoom("Low Coin Room", 25, 100);
-        public void CreateMediumCoinRoom() => CreateRoom("Medium Coin Room", 100, 400);
-        public void CreateHighCoinRoom() => CreateRoom("High Coin Room", 500, 2400);
-
-        public void CreatePrivateRoom()
+        private void JoinByName(string roomName)
         {
-            string custom = string.IsNullOrWhiteSpace(roomNameInput?.text) ? "Private Room" : roomNameInput.text.Trim();
-            CreateRoom(custom, 200, 1000);
+            if (roomManager == null)
+            {
+                return;
+            }
+
+            var room = roomManager.AvailableRooms.Find(r => r.RoomName == roomName);
+            if (room == null)
+            {
+                statusText?.SetText("Room not found.");
+                return;
+            }
+
+            bool success = roomManager.JoinRoomAsLocalPlayer(room.RoomId);
+            statusText?.SetText(success ? $"Joined {room.RoomName}" : $"Not enough coins for {room.RoomName}");
         }
 
-        private void CreateRoom(string defaultName, int fee, int reward)
+        private void JoinPrivateRoom()
         {
-            if (roomManager == null) return;
-            string custom = roomNameInput != null && !string.IsNullOrWhiteSpace(roomNameInput.text) ? roomNameInput.text.Trim() : defaultName;
-            roomManager.CreateRoom(custom, fee, reward);
+            if (roomManager == null)
+            {
+                return;
+            }
+
+            string requestedName = string.IsNullOrWhiteSpace(roomNameInput?.text) ? "Private Room" : roomNameInput.text.Trim();
+            var room = roomManager.AvailableRooms.Find(r => r.RoomName == requestedName) ?? roomManager.CreateRoom(requestedName, 500, 2000);
+            bool success = roomManager.JoinRoomAsLocalPlayer(room.RoomId);
+            statusText?.SetText(success ? $"Joined {room.RoomName}" : "Unable to join private room.");
+        }
+
+        private void RefreshButtonLabels()
+        {
+            SetButtonLabel(lowCoinRoomButton, "Low Coin Room (Entry: 100)");
+            SetButtonLabel(mediumCoinRoomButton, "Medium Coin Room (Entry: 300)");
+            SetButtonLabel(highCoinRoomButton, "High Coin Room (Entry: 700)");
+            SetButtonLabel(privateRoomButton, "Private Room (Entry: 500)");
+        }
+
+        private static void SetButtonLabel(Button button, string label)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            TMP_Text text = button.GetComponentInChildren<TMP_Text>();
+            if (text != null)
+            {
+                text.text = label;
+            }
         }
 
         private void RefreshRoomList()
         {
-            if (roomListText == null || roomManager == null) return;
+            if (roomListText == null || roomManager == null)
+            {
+                return;
+            }
 
             if (roomManager.AvailableRooms.Count == 0)
             {
-                roomListText.text = "No rooms available yet. Create one to start.";
+                roomListText.text = "No rooms available yet.";
                 return;
             }
 
@@ -70,7 +111,7 @@ namespace LudoMaster.UI
             for (int i = 0; i < roomManager.AvailableRooms.Count; i++)
             {
                 var room = roomManager.AvailableRooms[i];
-                sb.AppendLine($"{room.RoomName} | Fee:{room.EntryFee} | Reward:{room.WinReward} | {room.PlayerIds.Count}/{room.MaxPlayers}");
+                sb.AppendLine($"{room.RoomName} | Entry:{room.EntryFee} | Pot:{room.CurrentPot} | {room.PlayerIds.Count}/{room.MaxPlayers}");
             }
 
             roomListText.text = sb.ToString();

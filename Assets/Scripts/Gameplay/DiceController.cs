@@ -1,92 +1,43 @@
-using System.Collections;
-using LudoMaster.Signals;
+using LudoMaster.Managers;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace LudoMaster.Gameplay
 {
     /// <summary>
-    /// Handles random dice rolling, visual animation, and SFX playback.
+    /// Compatibility component that forwards dice interaction to DiceManager.
     /// </summary>
     public class DiceController : MonoBehaviour
     {
+        [SerializeField] private DiceManager diceManager;
         [SerializeField] private Button diceButton;
-        [SerializeField] private Animator diceAnimator;
-        [SerializeField] private AudioSource audioSource;
-        [SerializeField] private AudioClip diceRollClip;
-        [SerializeField] private float rollDuration = 0.8f;
-
-        private bool isRolling;
 
         private void Awake()
         {
-            WireDiceButton();
-        }
-
-        private void OnValidate()
-        {
-            if (diceButton == null)
+            if (diceManager == null)
             {
-                diceButton = GetComponent<Button>();
+                diceManager = GetComponent<DiceManager>();
             }
-        }
 
-        private void WireDiceButton()
-        {
-            if (diceButton == null)
+            if (diceManager == null)
             {
-                diceButton = GetComponent<Button>();
+                diceManager = gameObject.AddComponent<DiceManager>();
             }
 
             if (diceButton == null)
             {
-                var buttonInScene = GameObject.Find("RollButton");
-                if (buttonInScene != null)
-                {
-                    diceButton = buttonInScene.GetComponent<Button>();
-                }
+                diceButton = GetComponent<Button>();
             }
 
             if (diceButton != null)
             {
-                diceButton.onClick.RemoveListener(RollDice);
-                diceButton.onClick.AddListener(RollDice);
+                diceManager.Configure(diceButton);
             }
         }
 
-        /// <summary>
-        /// Public entry to roll dice values between 1 and 6.
-        /// </summary>
         public void RollDice()
         {
-            if (isRolling) return;
-            StartCoroutine(RollRoutine());
-        }
-
-        private IEnumerator RollRoutine()
-        {
-            isRolling = true;
-            if (diceButton != null) diceButton.interactable = false;
-            GameSignals.OnDiceRollingStateChanged?.Invoke(true);
-
-            if (diceAnimator != null)
-            {
-                diceAnimator.SetTrigger("Roll");
-            }
-
-            if (audioSource != null && diceRollClip != null)
-            {
-                audioSource.PlayOneShot(diceRollClip);
-            }
-
-            yield return new WaitForSeconds(rollDuration);
-
-            int value = Random.Range(1, 7);
-            GameSignals.OnDiceRolled?.Invoke(value);
-
-            isRolling = false;
-            if (diceButton != null) diceButton.interactable = true;
-            GameSignals.OnDiceRollingStateChanged?.Invoke(false);
+            diceManager?.RollDice();
         }
     }
 }
