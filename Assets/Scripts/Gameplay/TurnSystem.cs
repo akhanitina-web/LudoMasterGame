@@ -50,7 +50,7 @@ namespace LudoMaster.Gameplay
 
         public bool CurrentPlayerHasAnyMove(int diceValue)
         {
-            return CurrentPlayer != null && tokenSystem.HasAnyMove(CurrentPlayer, diceValue);
+            return CurrentPlayer != null && tokenSystem != null && tokenSystem.HasAnyMove(CurrentPlayer, diceValue);
         }
 
         private void MoveToNextActivePlayer()

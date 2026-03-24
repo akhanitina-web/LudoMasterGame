@@ -13,16 +13,10 @@ namespace LudoMaster.UI
 
         private void Awake()
         {
-            if (canvasScaler != null)
-            {
-                canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                canvasScaler.referenceResolution = new Vector2(1080f, 1920f);
-                canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-                canvasScaler.matchWidthOrHeight = 1f;
-            }
-
+            ApplyCanvasScaling();
             ApplySafeArea();
         }
+
         public void Configure(CanvasScaler scalerToUse, RectTransform safeAreaTarget = null)
         {
             canvasScaler = scalerToUse;
@@ -31,13 +25,30 @@ namespace LudoMaster.UI
                 safeAreaPanel = safeAreaTarget;
             }
 
-            Awake();
+            ApplyCanvasScaling();
+            ApplySafeArea();
+        }
+
+        private void ApplyCanvasScaling()
+        {
+            if (canvasScaler == null)
+            {
+                return;
+            }
+
+            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.referenceResolution = new Vector2(1080f, 1920f);
+            canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            canvasScaler.matchWidthOrHeight = 1f;
         }
 
         [ContextMenu("Apply Safe Area")]
         public void ApplySafeArea()
         {
-            if (safeAreaPanel == null) return;
+            if (safeAreaPanel == null)
+            {
+                return;
+            }
 
             Rect safeArea = Screen.safeArea;
             Vector2 minAnchor = safeArea.position;

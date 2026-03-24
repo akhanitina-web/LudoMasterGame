@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using LudoMaster.Core;
 using UnityEngine;
 
@@ -22,7 +21,7 @@ namespace LudoMaster.Gameplay
         [SerializeField] private Color neutralTileColor = new(0.95f, 0.95f, 0.95f, 1f);
         [SerializeField] private Color pathTileColor = Color.white;
         [SerializeField] private Color safeTileColor = new(1f, 0.88f, 0.2f, 1f);
-        [SerializeField] private Color boardBackgroundColor = new(0.12f, 0.14f, 0.22f, 1f);
+        [SerializeField] private Color boardBackgroundColor = new(0.16f, 0.2f, 0.27f, 1f);
 
         private readonly List<GameObject> generatedObjects = new();
 

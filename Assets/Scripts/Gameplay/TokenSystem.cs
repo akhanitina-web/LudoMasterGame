@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using LudoMaster.Core;
-using LudoMaster.Signals;
 using UnityEngine;
 
 namespace LudoMaster.Gameplay
@@ -38,6 +37,7 @@ namespace LudoMaster.Gameplay
         /// </summary>
         public bool HasAnyMove(PlayerData player, int diceValue)
         {
+            if (player == null || boardManager == null) return false;
             for (int i = 0; i < player.Tokens.Count; i++)
             {
                 if (CanMoveToken(player, player.Tokens[i], diceValue))
@@ -54,6 +54,7 @@ namespace LudoMaster.Gameplay
         /// </summary>
         public CoreTokenData GetFirstMovableToken(PlayerData player, int diceValue)
         {
+            if (player == null || boardManager == null) return null;
             for (int i = 0; i < player.Tokens.Count; i++)
             {
                 if (CanMoveToken(player, player.Tokens[i], diceValue))
@@ -71,6 +72,12 @@ namespace LudoMaster.Gameplay
         public IEnumerator MoveToken(PlayerData player, CoreTokenData tokenData, int diceValue, System.Action<TurnResult> callback)
         {
             TurnResult result = TurnResult.None;
+
+            if (player == null || tokenData == null || boardManager == null)
+            {
+                callback?.Invoke(TurnResult.NoMoves);
+                yield break;
+            }
 
             if (!CanMoveToken(player, tokenData, diceValue))
             {
@@ -181,7 +188,10 @@ namespace LudoMaster.Gameplay
                         token.Data.StepsMoved = 0;
                         token.Data.BoardIndex = -1;
                         token.Data.HomePathIndex = -1;
-                        token.SnapTo(tokenRoot.position);
+                        if (tokenRoot != null)
+                        {
+                            token.ResetToSpawn();
+                        }
                         captured = true;
                     }
                 }

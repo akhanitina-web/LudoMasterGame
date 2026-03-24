@@ -17,6 +17,8 @@ namespace LudoMaster.Managers
         [SerializeField] private MultiplayerSyncManager multiplayerSync;
 
         private readonly List<PlayerData> players = new();
+
+        private bool IsReady => turnSystem != null && tokenSystem != null && winSystem != null;
         private void OnEnable()
         {
             GameSignals.OnDiceRolled += HandleDiceRolled;
@@ -29,6 +31,13 @@ namespace LudoMaster.Managers
 
         private void Start()
         {
+            if (!IsReady)
+            {
+                Debug.LogWarning("GameManager is missing required system references.", this);
+                enabled = false;
+                return;
+            }
+
             BootstrapPlayers();
             turnSystem.Initialize(players);
             GameSignals.OnMatchStateChanged?.Invoke(MatchState.Playing);
@@ -62,6 +71,11 @@ namespace LudoMaster.Managers
 
         private void HandleDiceRolled(int value)
         {
+            if (!IsReady || turnSystem.CurrentPlayer == null)
+            {
+                return;
+            }
+
             if (!turnSystem.CurrentPlayerHasAnyMove(value))
             {
                 turnSystem.SkipCurrentPlayer();
@@ -74,7 +88,7 @@ namespace LudoMaster.Managers
             if (token != null)
             {
                 StartCoroutine(tokenSystem.MoveToken(current, token, value, OnTurnResolved));
-                multiplayerSync.BroadcastMove(current.PlayerId, token.TokenId, value);
+                multiplayerSync?.BroadcastMove(current.PlayerId, token.TokenId, value);
             }
         }
 
